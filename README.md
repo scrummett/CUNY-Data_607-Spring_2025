@@ -35,10 +35,10 @@ PKowalchuk_Update_titanic-survival-plots
 
 # Repo access
 This repository will remain public throughout the semester.    
-**No Contributor Access:**
+- **No Contributor Access:**
 You will not be granted direct contributor access to the repository during the semester.
-**Pull Request (PR) Process:**
+- **Pull Request (PR) Process:**
 Since we are using GitHub's free version outside of an organization, it is not possible to enforce rules for committing directly to the main branch. To minimize potential errors, all code must be submitted via a PR from a fork.
-**End of Semester:**
+- **End of Semester:**
 At the end of the semester, the repository will be made private.
 If you wish to maintain access to the repository, notify the instructor during the last week of class and provide your GitHub username to be added as a contributor.
