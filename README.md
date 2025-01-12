@@ -24,7 +24,7 @@ Work Locally: Perform the work you wish to share with the class in your forked r
     - Because you are working on your fork, your forked repository and the class repository may become out of sync.
     - To resolve this, perform a pull to bring changes from the class repository back into your forked repository.
 
-# Commit message guidelines
+# Commit message guidelines making a mistake here
 All commit messages must follow this format:    
 [Your First Initial + Last Name][New (for new code) or Update (for changes to existing code)][Description of the Commit]    
 Examples:
