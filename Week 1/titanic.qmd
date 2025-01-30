@@ -1,0 +1,198 @@
+---
+format: pdf
+---
+# Titanic passanger survival analysis
+
+## Analysis objective
+
+Identify the characteristics of passengers who survived and those who did not. Determine if certain groups of passengers had higher survival rates based on the features in the dataset.
+
+## Loading data
+
+Load data into dataframe and printing general insights.
+
+```{r}
+titanic_train <- read.csv("Titanic_train.csv")
+str(titanic_train)
+```
+
+\newpage
+
+## Exploratory Analysis
+
+Performing visual exploratory analysis using the ggplot2 library.
+
+```{r}
+#| warning: false
+library(ggplot2)
+p <- ggplot(data = titanic_train) 
+p
+```
+
+\newpage
+
+Maybe age defines groups with diferent survival chances.
+
+```{r}
+#| warning: false
+p + geom_boxplot(aes(y = Age))
+```
+
+\newpage
+
+Sex can also define survival chances.
+
+```{r}
+#| warning: false
+p + geom_boxplot(aes(x = Age, y = as.factor(Survived))) 
+```
+
+\newpage
+
+Box plots did not reveal groups, analyzing distributions using histograms, starting with age, same as before.
+
+```{r}
+#| warning: false
+p + geom_histogram(aes(x = Age))
+```
+
+Groups of different ages are observed.   
+_Are there any outliers?_
+
+\newpage
+
+Looking at the survival counts for the different ages.
+
+```{r}
+#| warning: false
+p + geom_histogram(aes(x = Age)) + 
+    facet_grid(cols = vars(Survived)) + 
+    ggtitle("Distribution of Age by Titanic Survival Status")
+```
+
+Side by side histograms show an age group that seems to have higher survival count. But it isn't entire easy to see.
+
+\newpage
+
+Plotting overlaping histograms to better compare survival and no survival counts.
+
+```{r}
+#| warning: false
+p + geom_histogram(aes(x = Age, fill = as.factor(Survived))) +
+    ggtitle("Distribution of Age by Titanic Survival Status")
+```
+
+\newpage
+
+Using a density plot to better see the comparison between survival and not.
+
+```{r}
+#| warning: false
+p + geom_density(aes(x = Age, 
+                     color = as.factor(Survived), 
+                     fill = as.factor(Survived)), 
+                     alpha = 0.25) + 
+    ggtitle("Density of Age by Titanic Survival Status")
+```
+
+Now we can see that young pasangers have a peak in survival counts.
+_First insight: many children survived._ 
+
+\newpage
+
+Now lets looking at sex in more detail. Using a bar chart to start exploration.
+
+```{r}
+#| warning: false
+p + geom_bar(aes(x = Sex)) + 
+    ggtitle("Titanic Passenger Counts by Gender")
+```
+
+More male than female passangers observed.
+
+\newpage
+
+To know if more females than males survived, we can't use absolute counts because there are many more male pasangers. A bar plot using relative rates will give better insights.
+
+```{r}
+#| warning: false
+p + geom_bar(aes(x = Sex, 
+                 y = Survived), 
+                 stat = "summary", 
+                 fun = "mean") + 
+    ggtitle("Titanic Survival Rate by Gender")
+```
+
+The bar shows female survival rate is much greated than male.
+
+\newpage
+
+We can do a similar analysis for pasangers of different classes.
+
+```{r}
+#| warning: false
+p + geom_bar(aes(x = Pclass, 
+                 y = Survived), 
+                 stat = "summary", 
+                 fun = "mean") + 
+    ggtitle("Titanic Survival Rate by Passenger Class")
+```
+
+First class pasangers have disproportionaly higher survival rates than other classes.
+
+\newpage
+
+Looking a pasanger counts, to find better insights.
+
+```{r}
+#| warning: false
+p + geom_bar(aes(x = Pclass, 
+                     fill = factor(Survived, 
+                     labels = c("No", "Yes")))) + labs(fill = "Survived") + ylab("Number of Passengers") + ggtitle("Titanic Survival Counts by Passenger Class")
+```
+
+Again survival rates are lower for 2 and 3 class pasangers, but not as easy to read as the rate bar plot. 
+
+\newpage
+
+Plotting proportions normalized to 1 so have a similar plot oas the rates bar plot.
+
+```{r}
+#| warning: false
+p + geom_bar(aes(x = Pclass, 
+                 fill = factor(Survived, 
+                               labels = c("No", "Yes"))), 
+                 position = "fill") + 
+    labs(fill = "Survived") + 
+    ylab("Proportion of Passengers") + 
+    ggtitle("Titanic Survival by Passenger Class")
+```
+
+Insight continues showing first class has higher survival.
+_Second Insight: first class survival is higher than 2nd and 3rd._
+
+\newpage
+
+Now we can combine pasanger sex and class together.
+
+```{r}
+#| warning: false
+p + geom_bar(aes(x = Pclass, 
+                 y = Survived, 
+                 fill = Sex), 
+                 position = "dodge", 
+                 stat = "summary", 
+                 fun = "mean") + 
+    ylab("Survival Proportion") + 
+    ggtitle("Titanic Survival Rate by Class and Sex")
+```
+
+_Third Insight: females in first and second class had higher survival._ 
+
+\newpage
+
+## Conclusion
+
+- Children had high survival
+- First class survival is higher than 2nd and 3rd
+- Females in first and second class had higher survival
