@@ -1,0 +1,79 @@
+---
+title: "Assignment1_DATA607"
+author: "Aaliyah John-Harry"
+date: "2025-01-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Analysis objective
+Determine if teams in the UEFA Champions League 2022 competition performed better in home or away games.
+
+##Loading data
+```{r load-csv}
+url<-'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches_latest.csv'
+ucl <- read.csv(url)
+```
+
+##View first 6 rows
+```{r preview}
+head (ucl)
+```
+##Rename columns for better understanding
+```{r rename}
+ucl <- ucl %>% rename(
+    home_team = team1,
+    away_team = team2,
+    home_goals = score1,
+    away_goals = score2
+  )
+```
+
+##Filter for 2022 UCL Competition
+```{r filter}
+filter_2022 <- filter(ucl, league == 'UEFA Champions League', season == 2022) 
+ucl_2022 <- select (filter_2022, date, league, season, home_team, away_team, home_goals, away_goals)
+head(ucl_2022)
+```
+
+## Distinguishing types of wins
+```{r results}
+ucl_2022 <- ucl_2022 %>%
+  mutate(result = case_when(
+    home_goals > away_goals ~ "Home Win",
+    home_goals < away_goals ~ "Away Win",
+    TRUE ~ "Draw"
+  ))
+
+outcome <- ucl_2022 %>%
+  count(result)
+
+head(outcome)
+```
+## EDA
+```{r plot}
+library (ggplot2)
+
+outcome <- outcome %>% rename(
+    count =n
+  )
+
+ggplot(outcome, aes(x = result, y = count)) +
+  geom_bar(stat = "identity")
+```
+
+#Conclusion
+  - More teams performed better at home than away in the UCL 2022 competition.
+  - There were more wins for away teams, however, than there were draws. 
+  - While the home team had the advantage in most cases, away teams were still able to perform better than the home in more games than they were both on par (ending in a draw)
+
+
