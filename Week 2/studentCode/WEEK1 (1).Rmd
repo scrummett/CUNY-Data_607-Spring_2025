@@ -1,0 +1,106 @@
+---
+title: 'DATA 607: Week 1'
+author: "Cindy Lin"
+date: "2025-01-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# INTRODUCTION
+
+This article examines the age of Congress and how that one simple factor can be significant enough to drive some of the major policy changes. A seemingly obvious question would be if Congress is skewed towards a particular age group, yet that age group is not a representation of the United States, are we only having a small subset of representation in our government? 
+
+Link to the article: https://fivethirtyeight.com/features/aging-congress-boomers/
+
+## Loading library
+
+```{r library, include= FALSE}
+library (tidyverse)
+
+
+```
+I am loading the tidyverse library because there are functions that can help work with the original data. The ones of interest are: the ability to summarize and extract a set of numbers.
+
+## Loading the data
+```{r, message=FALSE}
+
+get_data <- "https://raw.githubusercontent.com/fivethirtyeight/data/refs/heads/master/congress-demographics/data_aging_congress.csv"
+
+data <- data.frame(read.csv(get_data))
+
+```
+This grabs the data from Git Hub and puts it in a data frame and I named this "data".
+
+## Subset of the original data
+```{r, message=FALSE}
+
+data <- as.data.frame(mutate(data, start_year = str_extract(start_date, "\\d{4}"))) %>%
+  filter(start_year >= as.numeric(format(Sys.Date(), "%Y")) - 18)
+
+age_table <- data%>%
+  filter(party_code %in% c(100,200)) %>%
+  group_by(start_year, party_code, chamber) %>%
+  summarize(
+    avg_age = mean(age_years, na.rm = TRUE),
+    
+    count = n()
+  )
+
+print(age_table)
+```
+I want to filter and work with the subset of the original data. I don't think it is necessary to look throughout time to see the age of Congress so I decided to look at the past 18 years. The reason why I went with 18 is because that was when the first iPhone was released. Given that the article focuses on social media apps and a brief mention of mobile phones—I thought this timeframe was more relevant than looking further back in time. Essentially, the question is how the age of Congress has evolved alongside the rapid technological advancements.
+
+### Average age of congress 
+```{r average age}
+average_age <- data%>%
+  
+  group_by(start_year) %>%
+  summarize(
+    avg_age = mean(age_years, na.rm = TRUE),
+    
+    count = n()
+  )
+
+ggplot(average_age, aes(x= start_year, y = avg_age)) + geom_point() +
+
+labs(
+    title = "Average Age of Congress",
+    x = "Start Year",
+    y = "Average Age"
+  ) 
+```
+
+While the average age is between 57 and 59, we do see that as the average age is getting older in recent years. Age here is defined as the age at the time the senator or representative served. 
+
+
+### Average age of congress divided by chamber and party over the past 18 years
+
+```{r Divided By Party and Chamber}
+
+
+ggplot(age_table, aes(x = start_year, y = avg_age, color = as.factor(party_code))) +
+  geom_jitter(size = 2, width = 0.1, height = 0) + # using geom_jitter here because in 2013 the average age for democrats and republicans overlap and 
+                                                 # geom_jitter shows the overlap
+  facet_wrap(~ chamber) +  
+  labs(
+    title = "Average Age of Congress by Party and Chamber Over Time",
+    x = "Start Year",
+    y = "Average Age",
+    color = "Party"
+  ) +
+  scale_color_manual(
+    values = c("100" = "blue", "200" = "red"), 
+    breaks = c("100", "200"),
+    labels = c("100" = "Democrats", "200" = "Republicans")
+  ) 
+
+```
+
+
+Besides just Congress as a whole, I think it would be interesting to see the data divided by party and chamber. We see the average age tends to be older for democrats in the House while there is not quite the obvious age difference in the Senate.
+
+# CONCLUSIONS
+While Congress can be concluded to be getting older, the difference between party and chamber is more apparent. While House Democrats are older than their Republican counterparts. The Senate overall is older than its House counterparts. I think it would be interesting to see if the older democrats tend to serve longer and if location matters as well.  
