@@ -1,0 +1,143 @@
+---
+title: "Gillian McGovern - DATA 607 Assignment 1"
+output:
+  html_document: default
+  pdf_document: default
+date: "2025-01-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+In a world where any information is available online, for The Weather Channel, a company that literally has "Channel" in it's title, are people actually consuming weather information using The Weather Channel's TV channel, or TV in general for that matter? `Where People Go To Check The Weather` takes a deep dive into how people are checking the weather in the year 2015.
+
+Link: https://fivethirtyeight.com/features/weather-forecast-news-app-habits/
+
+## Loading the Libraries
+
+```{r}
+library(tidyverse)
+```
+
+
+## Loading the Data
+
+Let's load data into a dataframe and take a look at the data.
+
+```{r cars}
+weather_check_original <- read.csv(url("https://raw.githubusercontent.com/fivethirtyeight/data/fcf572c4fba05a42f1f34f415bd5e6dc389efd68/weather-check/weather-check.csv"))
+head(weather_check_original)
+```
+
+We now have a dataframe, but the column names are not only very wordy and long, but also contain `.` instead of ` `. So let's rename the column names to make them clearer and simpler.
+
+```{r}
+names(weather_check_original) = c("respondent_id","checks_weather_report_daily","weather_report_source","specific_website_or_app","likelihood_to_use_smartwatch","age","gender","total_household_income_from_previous_year","us_region")
+head(weather_check_original, 10)
+```
+
+## Exploratory Analysis
+
+Let's first validate and recreate some of the article's findings.
+
+The article first shows where people go to check the weather. Let's create a pie chart to visually show this data via a function (as we'll probably be making a few pie charts in this lab, and we don't need to repeat a bunch of code).
+
+```{r}
+weather_report_source <- table(weather_check_original$weather_report_source)
+weather_report_source_labels <- c("-", "A specific website or app", "Internet search", "Local TV News", "Newsletter", "Newspaper", "Radio weather", "The default weather app on your phone", "The Weather Channel")
+create_pct_pie_chart <- function(table, labels, title) {
+    percentage <- round(table/sum(table)*100)
+    pie(percentage, labels = paste(labels, percentage,"%", sep=" "), main = title) # include the % value in the label
+}
+weather_report_source_graph_title = "Where People Visit to Check the Weather"
+create_pct_pie_chart(weather_report_source, weather_report_source_labels, weather_report_source_graph_title)
+```
+
+As you can see, this matches the chart listed in the article. As the article mentions, The Weather Channel does surprisingly better than one might expect with a value of 15%!
+
+Now let's focus on daily checkers vs non-daily checkers. For daily checkers:
+
+```{r}
+daily_checkers <- subset(weather_check_original, weather_check_original$checks_weather_report_daily == "Yes")
+weather_report_source_daily_checkers <- table(daily_checkers$weather_report_source)
+weather_report_source_daily_checkers_graph_title = "Where Daily Checkers Visit to Check the Weather"
+create_pct_pie_chart(weather_report_source_daily_checkers, weather_report_source_labels, weather_report_source_daily_checkers_graph_title)
+```
+Let's do the same for non-daily checkers:
+
+```{r}
+non_daily_checkers <- subset(weather_check_original, weather_check_original$checks_weather_report_daily == "No")
+weather_report_source_non_daily_checkers <- table(non_daily_checkers$weather_report_source)
+weather_report_source_non_daily_checkers_graph_title = "Where Non-Daily Checkers Visit to Check the Weather"
+create_pct_pie_chart(weather_report_source_non_daily_checkers, weather_report_source_labels, weather_report_source_non_daily_checkers_graph_title)
+```
+
+Now let's find some trends that the article did not look into. One category the article mentions that could be interesting is a "specific website or app". For this category, users were able to input whatever they'd like, so we should probably convert all values to lower case first due to the variability of inputs. This will give us slightly more accurate results. Since there could many different results, let's also just look at the top 30 results.
+
+```{r}
+weather_specific_website_or_app <- table(tolower(weather_check_original$specific_website_or_app)) %>% 
+        as.data.frame() %>% 
+        arrange(desc(Freq))
+weather_specific_website_or_app_filtered <- subset(weather_specific_website_or_app, weather_specific_website_or_app$Var1 != "-") # skip blank responses
+head(weather_specific_website_or_app_filtered, 30)
+```
+Just looking at the top 30 responses (not counting blank responses), what's interesting here is that The Weather Channel (as a company, not the actual TV channel) is not even the top input. The top input is Accuweather. The Weather Channel does take up 2 of the top 5 weather sources though.
+
+Another possible interesting and more relevant category is specific environment - such as desktop, mobile, or CTV where each device is broken down by OS. That way we can get even more specific about where people are checking the weather. Do iOS users use the app more than Android? What could this tell us about app design?
+
+Now let's take a look at gender. Let's first see if there's a gender more likely to check the weather daily:
+
+```{r}
+daily_checkers_gender <- table(daily_checkers$gender)
+daily_checkers_gender_labels <- c("-", "Female", "Male")
+daily_checkers_gender_graph_title = "Daily Checkers Broken Down By Gender"
+create_pct_pie_chart(daily_checkers_gender, daily_checkers_gender_labels, daily_checkers_gender_graph_title)
+```
+
+As you can see, Females are only slightly more likely to check the weather on a daily basis.
+
+Now let's see if there's a difference in the weather source for gender. Let's try a barplot this time:
+
+```{r}
+females <- subset(weather_check_original, weather_check_original$gender == "Female")
+weather_report_source_females <- table(females$weather_report_source)
+weather_report_source_females_ratios <- weather_report_source_females/sum(weather_report_source_females)
+barplot(weather_report_source_females_ratios, las=2, ylim=c(0,0.25), main = "Where Females Visit to Check the Weather")
+```
+
+Now let's check Males:
+
+```{r}
+males <- subset(weather_check_original, weather_check_original$gender == "Male")
+weather_report_source_males <- table(males$weather_report_source)
+weather_report_source_males_ratios <- weather_report_source_males/sum(weather_report_source_males)
+barplot(weather_report_source_males_ratios, legend=TRUE, args.legend = list(x = 9, y = -1.9, horiz=T), las=2, ylim=c(0,0.25), main = "Where Males Visit to Check the Weather")
+```
+
+These graphs are pretty similar which is not too surprising. What is interesting is that radio is greater than newspaper for males, whereas females are more likely to check the newspaper than the radio.
+
+## Conclusions
+
+Some conclusions shown in this lab report:
+
+* People mainly check the weather via the default app on their phone
+* Non-daily checkers are more likely to just do an internet search
+* Daily checkers are more likely to use a specific website or app or The Weather Channel
+* For an app or a website, Accuweather is the most popular
+* Females are only slightly more likely to check the weather daily
+* Males are more likely to use the radio to check the weather than a newspaper, which is the opposite for females
+
+To further verify the other trends the article mentions, I would continue filtering the data, and create more graphs.
+
+Other Trends I would look into (not mentioned in the article):
+
+* Plot how househould income relates to weather source
+* Check if daily checkers are more likely to use a smartwatch
+* I would also add more fields next time such as specific device type (environment) used and what time of day the weather is checked
+
+
+
+
