@@ -1,0 +1,86 @@
+---
+title: "Election Forecast 2022"
+author: "Alina Vikhnevich"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+library(tidyverse)
+library(readxl)
+
+# Load dataset
+senate_national_toplines_2022 <- read_excel("election-forecasts-2022/senate_national_toplines_2022.xls")
+
+# Verify dataset is loaded correctly
+if (!exists("senate_national_toplines_2022")) {
+  stop("Error: Dataset 'senate_national_toplines_2022' not found.")
+}
+
+# Data Cleaning & Transformation
+election_df <- senate_national_toplines_2022 %>%
+  select(forecastdate, branch, chamber_Dparty, chamber_Rparty, popvote_margin) %>%
+  rename(
+    Date = forecastdate,
+    Branch = branch,
+    Democratic_Seats = chamber_Dparty,
+    Republican_Seats = chamber_Rparty,
+    Popular_Vote_Margin = popvote_margin
+  )
+
+# Convert Date to proper format
+election_df$Date <- as.Date(election_df$Date, format="%Y-%m-%d")
+election_df <- election_df %>% drop_na(Date)
+```
+## Introduction
+
+The 2022 FiveThirtyEight Election Forecast provides predictions for the U.S. Senate races based on polling, historical data, and statistical models.
+This dataset offers insights into the expected number of seats for Democratic and Republican candidates and the popular vote margin over time.
+
+In this analysis, we aim to clean, transform, and visualize the dataset to better understand election trends.
+By exploring seat projections and vote margin fluctuations, we can observe how public opinion shifted leading up to the election.
+---
+
+## Data Visualization
+
+The following plots visualize key election trends:
+
+The first plot shows the forecasted number of Senate seats for the Democratic and Republican parties over time.
+
+```{r, echo=TRUE, fig.width=8, fig.height=5}
+ggplot(election_df, aes(x=Date)) +
+  geom_line(aes(y=Democratic_Seats, color="Democratic")) +
+  geom_line(aes(y=Republican_Seats, color="Republican")) +
+  theme_minimal() +
+  labs(
+    title="Senate Seats Forecast Over Time",
+    x="Date",
+    y="Number of Seats"
+  ) +
+  scale_color_manual(values = c("Democratic" = "blue", "Republican" = "red"))
+```
+
+The second plot illustrates how the predicted popular vote margin fluctuated throughout the election period.
+
+```{r, include=TRUE, fig.width=8, fig.height=5}
+ggplot(election_df, aes(x=Date, y=Popular_Vote_Margin, color=Branch)) +
+  geom_line() +
+  theme_minimal() +
+  labs(
+    title="Popular Vote Margin Over Time",
+    x="Date",
+    y="Popular Vote Margin"
+  )
+```
+---
+## Conclusion
+
+Analyzing the 2022 FiveThirtyEight Election Forecast dataset provided meaningful insights into election trends.
+By examining seat forecasts and popular vote margins, we observed how public sentiment shifted over time.
+
+The visualizations highlight how election projections evolved leading up to voting day,
+demonstrating the impact of polling trends and external influences.
+
+This project was a great opportunity to work with real-world election data,
+offering a deeper understanding of how predictive models inform political analysis.
