@@ -1,0 +1,131 @@
+---
+title: "DATA607_Week 1 Assignment"
+author: "Olivia Azevedo"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+---
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(bslib)
+```
+
+## Overview
+Congress today is older than it's ever been with the median age of the 118th Congress being 59 years old across all senators and representatives. This is mainly due to the country's aging population, which is most apparent in the disproportionate influence of the baby boomer generation. Congress being disproportionately older than American population has consequences such as congress members being more likely to introduce legislation that addresses senior issues, not focusing as much on issues that are important to younger Americans, and struggling when dealing with issues related to modern technology\
+
+**Citation:**
+Skelley, G. (2023, April 3). Congress today is older than it’s ever been. FiveThirtyEight. https://fivethirtyeight.com/features/aging-congress-boomers
+
+---
+
+## Data
+
+### Import Data
+Read in csv file as data frame
+```{r}
+data <- read.csv("https://raw.githubusercontent.com/fivethirtyeight/data/refs/heads/master/congress-demographics/data_aging_congress.csv")
+```
+
+### Data Handling
+- Adjust data types
+- Create `year` column by extracting year from `start_date`
+- Create party code reference table and merge with data
+```{r}
+data$party_code = as.character(data$party_code)
+data$start_date = as.Date(data$start_date, format = "%Y-%m-%d") 
+data$year = as.numeric(format(data$start_date, '%Y'))
+
+party_ref = tribble(
+  ~party_code, ~party,
+  "100", "Democratic",
+  "112", "Conservative",
+  "200", "Republican",
+  "328", "Independent",
+  "329", "Independent Democrat",
+  "331", "Independent Republican",
+  "347", "Prohibitionist",
+  "356", "Union Labor",
+  "370", "Progressive",
+  "380", "Socialist",
+  "402", "Liberal",
+  "522", "American Labor",
+  "523", "American Labor (La Guardia)",
+  "537", "Farmer-Labor"
+)
+
+data = merge(data, party_ref)
+```
+
+### Subset Data 
+- Select subset data by column
+- Sort by `year`
+```{r}
+data = data %>% 
+  select(congress, year, chamber, state_abbrev, party, age_years, generation) %>%
+  arrange(year)
+head(data)
+```
+
+### Data Visualizations
+Time Series Plot
+```{r}
+data %>%
+  group_by(year) %>%
+  summarise(med_age = median(age_years)) %>%
+  ggplot(mapping = aes(x = year, y = med_age)
+    ) + 
+    geom_line() +
+    labs(
+      title = "Median Age of Congress Overtime",
+      x = 'Year',
+      y = 'Median Age') + 
+    theme_classic()
+```
+
+Multiple Time Series Plot
+```{r}
+data %>%
+  group_by(year, chamber) %>%
+  summarise(med_age = median(age_years), .groups="keep") %>%
+  ggplot(aes(x = year, y = med_age, color = chamber)
+         ) +
+    geom_line() +
+    labs(
+      title = "Median Age of Congress by Chamber Overtime",
+      x = 'Year',
+      y = 'Median Age',
+      color = 'Chamber') + 
+    theme_classic()
+```
+
+100% Stacked Bar Chart
+```{r}
+count_gen_data = data %>%
+  group_by(year, generation) %>%
+  tally()
+
+count_gen_data %>%
+  group_by(year) %>%
+  mutate(percent_gen = n / sum(n) * 100) %>%
+  ggplot(
+    aes(x = year, y = percent_gen, fill = generation)
+    ) +
+    geom_col() +
+    labs(
+      title = "Generation Distribution per Congress",
+      x = 'Year',
+      y = 'Percent of Congress',
+      color = 'Generation') + 
+    theme_classic()
+
+```
+
+---
+
+## Conclusions
+To further investigate why congress is older than ever before, I would extend the work outlined to include demographic data, specifically age, of the voting population (at the time of voting) for each congress member. This will help to verify if older voters are more likely to vote and prefer people from their own age group. In addition, I would include data on technology proficiency for each member of congress to assess the level of unfamiliarity congress members have with modern technology. Lastly, it would be insightful to include other demographic values for all senators and representatives (such as gender and race) to further expand this analysis and identify potential other disproportionate demographic values being represented in congress and how it has changed overtime.
