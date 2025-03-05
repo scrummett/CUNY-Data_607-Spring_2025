@@ -2,12 +2,12 @@
 
 ## Project 3 Sign up
 
-Team 1:
-Team 2:
-Team 3:
-Team 4:
-Team 5:
-Team 6:
+Team 1:    
+Team 2:     
+Team 3:    
+Team 4:    
+Team 5:    
+Team 6:    
 
 ## General
 This repository is designed to facilitate code sharing and collaborative learning among the class. While all assignments must be submitted via Brightspace as per course instructions, this space serves as a hub for learning from and supporting your classmates. Think of the course material as a project in a real company, with our shared goal being to master the content and help each other succeed. This repository represents the centralized codebase, showcasing the collective work and achievements of the semester.
