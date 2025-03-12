@@ -3,7 +3,7 @@
 ## Project 3 Sign up
 
 Team 1:    
-Team 2:     
+Team 2:   Alina Vikhnevich, Olivia Azevedo, Alyssa Gurkas, Musrat Jahan    
 Team 3:    
 Team 4:    
 Team 5:    
