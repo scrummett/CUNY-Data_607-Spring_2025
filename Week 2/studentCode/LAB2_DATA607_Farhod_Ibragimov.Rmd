@@ -1,0 +1,199 @@
+---
+title: "DATA 607 Week 2 assignment"
+author: "Farhod Ibragimov"
+date: "2025-02-09"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 1: Build Table
+
+First, I will load necessary libraries:
+
+
+```{r librarires, message=FALSE, warning=FALSE}
+library(DBI)
+library(RMySQL)
+library(dplyr)
+library(ggplot2)
+library(googlesheets4)
+```
+
+
+Here is the code to connect and create a table in MySQL database. My credentials are stored in my Windows environment variables.
+
+
+```{r connect-to-MySQL}
+# Credentials to access database from MySQL
+db_host <- Sys.getenv("DB_HOST")
+db_port <- as.integer(Sys.getenv("DB_PORT"))
+db_name <- Sys.getenv("DB_NAME")
+db_user <- Sys.getenv("DB_USER")
+db_pass <- Sys.getenv("DB_PASS")
+print(db_host)
+
+# MySQL database connection
+con <- dbConnect(
+                 drv = RMySQL::MySQL(), 
+                 dbname = db_name, 
+                 host = db_host,
+                 username = db_user,
+                 password = db_pass
+                 )
+query <- paste("CREATE TABLE IF NOT EXISTS Movies_new1 (
+              Timestamp DATETIME,
+              Name CHAR(100),
+              Gladiator2 INT,
+              Wolfs INT,
+              The_Substance INT,
+              Bad_Boys4 INT,
+              The_Beekeeper INT,
+              Rebel_Ridge INT,
+              PRIMARY KEY (Name)
+              )", sep = "")
+
+dbExecute(con, query)
+```
+
+I created a Google Form survey to collect movie reviews. Here the link to the survey:
+
+<https://docs.google.com/forms/d/e/1FAIpQLScraIXSeT6wwZyp4QuA06m1aX5TPUDmccTSz1_a6D5mJWuLBg/viewform>
+
+The form is connected to a Google Sheet, which is publicly accessible and stores survey responses. Here is the link to the Google Sheets:
+
+<https://docs.google.com/spreadsheets/d/1x7uAbOozoNutaFOfbq_X8c33vzSXvqshJxZgu_MfJhI/edit?usp=sharing>
+
+This code chunk pulls the data from Google Sheets:
+
+
+```{r googlesheets, echo=TRUE, message=FALSE, warning=FALSE}
+
+# URL of the publicly accessible "movie_reviews" Sheet
+sheet_url <- sheet_url <- "https://docs.google.com/spreadsheets/d/1x7uAbOozoNutaFOfbq_X8c33vzSXvqshJxZgu_MfJhI/edit?usp=sharing"
+sheet_name <- "Form Responses 1"
+
+# Read the data from the sheet
+data <- read_sheet(sheet_url, sheet = sheet_name)
+glimpse(data)
+print(colnames(data)) 
+```
+
+## Part 2: Store data in SQL database.
+
+This function iterates through the rows and pulls each value from column in the sheet's data and assigns it into each value of the same column in MySQL database table:
+
+
+```{r insert-data-into-SQL}
+
+# Iterating through each variable values row in data.
+for (i in 1:nrow(data)) {
+  name <- data$Name[i]
+  gladiator2 <- data$Gladiator2[i]
+  wolfs <- data$Wolfs[i]
+  the_substance <- data$The_Substance[i]
+  bad_boys4 <- data$Bad_Boys4[i]
+  the_beekeeper <- data$The_Beekeeper[i]
+  rebel_ridge <- data$Rebel_Ridge[i]
+  
+  #SQL code to insert values for same variables in each new row in MySQL database
+  query <- paste0(
+    "INSERT IGNORE INTO Movies_new1 (Name, Gladiator2, Wolfs, The_Substance, Bad_Boys4, The_Beekeeper, Rebel_Ridge) VALUES (",
+    "'", name, "', ",
+    "'", gladiator2, "', ",
+    "'", wolfs, "', ",
+    "'", the_substance, "', ",
+    "'", bad_boys4, "', ",
+    "'", the_beekeeper, "', ",
+    "'", rebel_ridge, "')"
+  )
+  
+  dbExecute(con, query)
+}
+```
+
+
+
+## Part 3: Transfer data from SQL database to R dataframe.
+
+This chunk transfers data from the SQL database into R dataframe df:
+
+
+```{r transfer-data-from-SQL-to-R}
+
+# Query to select all data from the table
+query <- "SELECT * FROM Movies_new1"
+# Execute the query and fetch the results
+df <- dbGetQuery(con, query)
+
+
+# Summary of df
+glimpse(df)
+summary(df)
+```
+
+
+## Part 4: Missing data strategy
+
+Here I remove irrelevant Timestamp column and preview data:
+
+
+```{r remove-Timestamp-column}
+#remove Timestamp column
+
+df_zeroes_to_means <- df |> select(-Timestamp)
+glimpse(df_zeroes_to_means)
+
+```
+
+
+This dataset contains some reviews with value of zero (0). These zero values are not actual reviews of the movies, zero values indicate that a person didn't watch this movie and didn't rate it in survey.
+
+This code replaces zero values in variables to the mean of the of the same variable:
+
+
+```{r replace-zeroes-with-means}
+# Replace zeros with the mean of each numeric column and round the values
+df_zeroes_to_means <- df_zeroes_to_means |>
+  mutate(across(where(is.numeric), ~ {
+    column_mean <- round(mean(.x[.x != 0], na.rm = TRUE))
+    .x[.x == 0] <- column_mean
+    round(.x, 0)
+  }))
+
+glimpse(df_zeroes_to_means)
+summary(df)
+```
+
+```{r summary-of-data}
+summary(df_zeroes_to_means)
+```
+
+
+The summaries above show different statistical properties before and after replacing zeroes with means.
+
+
+The reasons why I decided to replace missing values with means:
+
+1.  It can preserve statistical properties of the dataset.
+2.  It reduces bias and prevent skewing analysis results.
+3.  Variable with some missing values can effect the mean of that variable.
+4.  Data is more consistent and easier to interpret.
+5.  Missing and NA values can cause wrong charts and graphs. This is the reason I didn't replace zeroes with NAs.
+6.  I didn't want to remove rows with zeroes, because it can cause loss of valuable information.
+
+
+
+```{r save-data-to-CSV}
+# Write the data to a CSV file}
+write.csv(data, "C:/CUNY_MSDS/DATA607/LAB2/Movie_Reviews.csv", row.names = FALSE)
+
+
+
+# Disconnecting from MySQL
+dbDisconnect(con)
+```
