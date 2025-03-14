@@ -5,7 +5,7 @@
 Team 1:    
 Team 2:   Alina Vikhnevich, Olivia Azevedo, Alyssa Gurkas, Musrat Jahan    
 Team 3:   Ali Ahmed    
-Team 4:    
+Team 4:   Samuel Crummett, Cindy Lin, William Forero, Maxfield Raynolds 
 Team 5:    
 Team 6:    
 
