@@ -7,7 +7,7 @@ Team 2:   Alina Vikhnevich, Olivia Azevedo, Alyssa Gurkas, Musrat Jahan
 Team 3:   Ali Ahmed    
 Team 4:   Samuel Crummett, Cindy Lin, William Forero, Maxfield Raynolds      
 Team 5:   Gillian McGovern, Aaliyah John-Harry, Farhod Ibragimov
-Team 6:    
+Team 6:     
 
 ## General
 This repository is designed to facilitate code sharing and collaborative learning among the class. While all assignments must be submitted via Brightspace as per course instructions, this space serves as a hub for learning from and supporting your classmates. Think of the course material as a project in a real company, with our shared goal being to master the content and help each other succeed. This repository represents the centralized codebase, showcasing the collective work and achievements of the semester.
