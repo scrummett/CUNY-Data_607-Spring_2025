@@ -3,10 +3,10 @@
 ## Project 3 Sign up
 
 Team 1:    
-Team 2:   Alina Vikhnevich, Olivia Azevedo, Alyssa Gurkas, Musrat Jahan    
-Team 3:   Ali Ahmed    
-Team 4:   Samuel Crummett, Cindy Lin, William Forero, Maxfield Raynolds      
-Team 5:   Gillian McGovern, Aaliyah John-Harry, Farhod Ibragimov        
+Team 2:   Alina Vikhnevich, Olivia Azevedo, Alyssa Gurkas*, Musrat Jahan*    
+Team 3:   Ali Ahmed*, Silma Khan*, Daniel Hanasab    
+Team 4:   Samuel Crummett*, Cindy Lin*, William Forero*, Maxfield Raynolds*      
+Team 5:   Gillian McGovern*, Aaliyah John-Harry, Farhod Ibragimov*        
 Team 6:     
 
 ## General
