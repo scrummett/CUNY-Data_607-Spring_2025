@@ -1,0 +1,281 @@
+---
+title: "SMS Text Mining - Spam vs Legitimate"
+author: "Olivia Azevedo"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float:
+      collapsed: true
+---
+
+## Overview
+
+Demonstrates tidying text data and performing text processing via lexicon-based sentiment analysis. The corpus used for this assignment is a collection of SMS messages tagged as spam or legitimate. The files contain one message per line. Each line is composed by two columns:
+
+  * spam_flag: contains the label (ham or spam)
+  * text: contains the raw text.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidytext)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(textdata)
+library(groupdata2)
+library(forcats)
+
+spam_colors = c("Spam" = "tomato", "Legitimate" = "steelblue")
+```
+
+
+<hr style="border:1px solid #2d3c52">
+
+
+## Load Data
+```{r}
+data = read.csv('https://raw.githubusercontent.com/okazevedo90/DATA607_GitHub/refs/heads/main/weekly_assignments/text_mining/spam.csv')
+slang_ref = read.csv('https://raw.githubusercontent.com/okazevedo90/DATA607_GitHub/refs/heads/main/weekly_assignments/text_mining/slang.csv')
+```
+
+### Create Stop Word DataFrame
+```{r}
+sms_stop_words = c('lor')
+lexi = rep(c('custom'), length(sms_stop_words))
+
+custom_stop_words = bind_rows(
+  tibble(word = sms_stop_words, lexicon = lexi),
+  stop_words)
+```
+
+
+<hr style="border:1px solid #2d3c52">
+
+
+## Clean and Tidy Text Data
+
+* Update `spam_flag` column values
+* Remove html characters
+* Unnest and Tidy SMS text by making each token or word one row
+* Join and replace common text slang / abbreviations with english meaning
+* Unnest SMS words again to account for any slang replacements that are more than one word
+```{r}
+data$text = iconv(data$text, to = "ASCII", sub = "")
+
+
+df = data |>
+  mutate(
+    id = row_number(),
+    spam_flag = ifelse(spam_flag == 'ham', 'Legitimate', 'Spam'),
+    # Remove html characters
+    text = str_replace_all(str_replace_all(
+      str_replace_all(
+        str_replace_all(
+          text, '&amp', ''), '&gt', ''), '&lt', ''), "’", "'")
+        ) |>
+  unnest_tokens(slang, text) |>
+  left_join(slang_ref, by = join_by(slang)) |>
+  mutate(word = ifelse(is.na(word), slang, word)) |>
+  unnest_tokens(word, word)
+
+# df = downsample(df, 'spam_flag')
+```
+
+
+<hr style="border:1px solid #2d3c52">
+
+
+## Sentiment and Word Frequency Analysis - Spam vs Legitimate SMS
+
+Identify Most Common Words
+```{r, warning=FALSE}
+df |>
+  anti_join(custom_stop_words, by = join_by(word)) |>
+  group_by(spam_flag) |>
+  count(word, sort = TRUE) |>
+  slice_max(n, n = 10) %>% 
+  mutate(word = reorder(word, n)) |>
+  ggplot(aes(n, word, fill = spam_flag)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~spam_flag, scales = "free_y") +
+  scale_fill_manual(values = spam_colors) +
+  labs(
+    title = 'Most Common Spam vs Legitimate SMS Words',
+    x = 'Count', y = NULL
+    ) + 
+  theme_classic()
+
+df |>
+  inner_join(custom_stop_words, by = join_by(word)) |>
+  group_by(spam_flag) |>
+  count(word, sort = TRUE) |>
+  slice_max(n, n = 10) %>%
+  mutate(word = reorder(word, n)) |>
+  ggplot(aes(n, word, fill = spam_flag)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = spam_colors) +
+  facet_wrap(~spam_flag, scales = "free_y") +
+  labs(
+    title = 'Most Common Spam vs Legitimate SMS STOP Words',
+    x = 'Count', y = NULL
+    ) + 
+  theme_classic()
+```
+
+
+Identify Most Common Sentiment Text Categories
+```{r, warning=FALSE}
+df |>
+  anti_join(custom_stop_words, by = join_by(word)) |>
+  inner_join(get_sentiments("nrc"), by = join_by(word)) %>%
+  group_by(spam_flag) |>
+  mutate(sf_n = n()) |>
+  ungroup() |>
+  group_by(spam_flag, sentiment) |>
+  summarise(n = n() / sf_n, .groups='keep') |>
+  distinct() |>
+  ggplot(aes(reorder(sentiment, n), n, fill = spam_flag)) +
+  geom_col(position='dodge') +
+  scale_fill_manual(values = spam_colors) +
+  coord_flip() +
+  labs(title = "SMS NRC Lexicon Sentiment Category Word Distribution
+       Spam vs Legitimate",
+       y = 'Percent SMS Type', x = 'Sentiment Category', fill = 'SMS Type') +
+  theme_classic()
+```
+
+
+Identify Distribution of Overall SMS Net Sentiment Score
+```{r}
+df |>
+  anti_join(custom_stop_words, by = join_by(word)) |>
+  inner_join(get_sentiments("bing"), by = join_by(word)) |>
+  count(spam_flag, id, sentiment) |>
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) |> 
+  mutate(sentiment = positive - negative) |>
+  ggplot(aes(sentiment, fill = spam_flag)) +
+  geom_histogram(bins = 25, show.legend = FALSE, color = 'black') +
+  scale_fill_manual(values = spam_colors) +
+  facet_wrap(~spam_flag) +
+  labs(
+    title = 'SMS Net Sentiment Bing Score Distribution - Spam vs Legitimate',
+    x = 'Net Sentiment Bing Score (positive - negative)', y = 'Count'
+    ) + 
+  theme_classic()
+
+```
+
+
+Identify Differences in SMS Lexicon Sentiment Scores 
+```{r, warning=FALSE}
+afinn = df |>
+  anti_join(custom_stop_words, by = join_by(word)) |>
+  inner_join(get_sentiments("afinn"), by = join_by(word)) %>% 
+  group_by(id, spam_flag) %>% 
+  summarise(sentiment = sum(value), .groups='keep') %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc = bind_rows(
+  df |>
+    anti_join(custom_stop_words, by = join_by(word)) |>
+    inner_join(get_sentiments("bing"), by = join_by(word)) %>%
+    mutate(method = "Bing et al."),
+  df |>
+    anti_join(custom_stop_words, by = join_by(word)) |>
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative")),
+               by = join_by(word)
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(spam_flag, method, id, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(sentiment, method, fill=method)) +
+  geom_boxplot(show.legend = FALSE) +
+  facet_wrap(~spam_flag) +
+  labs(
+    title = 'SMS Sentiment Score by Lexicon - Spam vs Legitimate',
+    x = 'Sentiment Score', y = 'Lexicon'
+    ) + 
+  theme_classic()
+```
+
+
+Identify Words Contributing to Highest Positive and Negative Sentiment Scores
+```{r}
+df |>
+  anti_join(custom_stop_words, by = join_by(word)) |>
+  inner_join(get_sentiments("bing"), by = join_by(word)) %>%
+  count(spam_flag, word, sentiment, sort = TRUE) %>%
+  ungroup() %>%
+  group_by(spam_flag, sentiment) %>%
+  slice_max(n, n = 5) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col() +
+  scale_fill_manual(values = c('darkorange', 'forestgreen')) +
+  facet_wrap(~spam_flag, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL) +
+  theme_classic()
+```
+
+
+Identify Most Important Words per SMS Type within all SMS text (tf-idf)
+```{r}
+sms_words <- df |>
+  anti_join(custom_stop_words, by = join_by(word)) |>
+  count(spam_flag, word, sort = TRUE)
+
+total_words <- sms_words %>% 
+  group_by(spam_flag) %>% 
+  summarize(total = sum(n))
+
+sms_words <- left_join(sms_words, total_words, by = join_by(spam_flag))
+
+# ggplot(sms_words, aes(n/total, fill = spam_flag)) +
+#   geom_histogram(show.legend = FALSE) +
+#   xlim(NA, 0.0009) +
+#   facet_wrap(~spam_flag, ncol = 2, scales = "free_y")
+
+freq_by_rank <- sms_words %>% 
+  group_by(spam_flag) %>% 
+  mutate(rank = row_number(), 
+         term_frequency = n/total) %>%
+  ungroup()
+
+# freq_by_rank %>% 
+#   ggplot(aes(rank, term_frequency, color = spam_flag)) + 
+#   geom_line(linewidth = 1.1, alpha = 0.8, show.legend = FALSE) + 
+#   scale_x_log10() +
+#   scale_y_log10()
+
+sms_tf_idf <- sms_words %>%
+  bind_tf_idf(word, spam_flag, n) %>%
+  select(-total) %>%
+  arrange(desc(tf_idf))
+
+sms_tf_idf %>%
+  group_by(spam_flag) %>%
+  slice_max(tf_idf, n = 15) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = spam_flag)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values = spam_colors) +
+  facet_wrap(~spam_flag, ncol = 2, scales = "free_y") +
+  labs(
+    title = 'SMS tf-idf Important Words - Spam vs Legitimate',
+    x = 'tf-idf', y = NULL
+    ) + 
+  theme_classic()
+```
+
