@@ -1,0 +1,84 @@
+---
+title: "DATA607 Project 2b"
+author: "Gullit Navarrete"
+date: "2025-03-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(patchwork)
+```
+
+# Data Loading
+## Gillian McGovern's data
+This R Markdown will be using the dataset provided by Gillian McGovern from the discussion board. For the sake of simpicity, I'll convert the provided "Coca-cola" file from .xlsx to .csv and additonally there is text obscuring and at risk of distorting the data (the first 3 rows only say "Data provided by SimFin" with an additional row being empty, and the “Profit & Loss statement" which I would rather remove to have a clean way of naming the columns myself). 
+Due to the csv file having a totally empty first column, I will name it for detection and follow up with removing it entirely. The following code is used to load and observe the dataset:
+```{r loading, echo=TRUE}
+cola <- read_csv(
+  "https://raw.githubusercontent.com/GullitNa/DATA607-Project2/main/Cola.csv",
+  skip = 4,
+  col_names = c(
+    "test", "In million USD", "FY09", "FY10", "FY11", "FY12",
+    "FY13", "FY14", "FY15", "FY16", "FY17", "FY18"
+  )
+) %>%
+  select(-test)
+head(cola)
+```
+## Explanation and Initial Thoughts
+Loading in this dataset took alot of trail and error to see what works and what doesn't. Aside from the future code to further tidy up the data, I would say the main challenge of this dataset was the skipping of the constant non-data related rows to see which is the best start for tidying, naming the columns and originally shifting the data to the left, but followed up with naming the very first empty column for its removal. This in general term, would be transformation of the data simply because of the skipping of the metadata, and renaming columns.
+
+# Data Cleaning
+In order for readability, I can change all the numerical numbers from the columns to not include commas and to ensure that the data is counting these results as numerical data. I understand that the data still contains NA 
+```{r numerical, echo=TRUE}
+cola <- cola %>%
+  mutate(
+    across(starts_with("FY"), ~ as.numeric(gsub(",", "", .x)))
+  )
+cola
+```
+# Data Tidy Transformations
+As per Gillian McGovern's dataset, an accounting spreadsheet with specific cells being empty and registered as NA is completely normal. For the sake of readability, it's actually best if I don't interfer and tamper with these cells for the reason I just listed and to preserve the raw data, in the event to not shake and alter the analysis. For example, some expense or revenue categories may not apply in all fiscal years, or a line item might only appear under specific conditions (like the discontinued operations row). As a result, there are NA values in places where data isn’t recorded. These NA values typically won’t affect the analysis, assuming ignoring/filtering them out for specific datawide calculations as one example. Additionally for the transformation process, to make it clear to the viewer, rather than just the last two digits of the year appearing for visualization, I mutate to add "20" infront to show the full year ("10" to "2010").
+```{r transformation, echo=TRUE}
+cola_tidy <- cola %>%
+  pivot_longer(
+    cols = starts_with("FY"),
+    names_to = "Year",
+    values_to = "Value"
+  ) %>%
+  mutate(Year = sub("FY", "", Year),
+         Year = paste0("20", Year)
+  )
+cola_tidy
+```
+
+# Analysis
+## Filtering
+I plan to analyze this data via specifically choosing the category "Net increase (decrease) during the year" in terms of visualization and also by comparing the years.
+```{r filter, echo=TRUE}
+net_year <- cola_tidy %>%
+  filter(`In million USD` == "Net increase (decrease) during the year")
+net_year
+```
+
+## Plotting
+According to the bar graph of "Net increase (decrease) over the years, and as an example of seeing how a specific category changes over time, Coca-cola remains positive within the years of 2009, 2010, and 2011. However, in 2012 marks the first major negative value of -4361 in million USD. 2013, and 2016 rebound somewhat substantially, otherwise 2014, 2015, and 2017 indicate net decreases. 2018's fiscal year shows significant growth indicating that Coca-cola as a company had significant improvement to get out of bounds form their negative value years.
+```{r plotting2, echo=TRUE}
+ggplot(net_year, aes(x = Year, y = Value)) +
+  geom_col() +
+  labs(
+    title = "Net Increase (Decrease) Over the Years",
+    x = "Fiscal Year",
+    y = "Value (in million USD)"
+  )
+```
+
+# Conclusion
+Throughout the Coca-cola dataset, I skipped the first few lines to remove metadata as well as renamed columns and removed any extra blank column so that each row corresponds to a financial statement line and each column is a fiscal year (FY09–FY18) also including the "in million USD" as a base categorical column. Additionally followed up via plotting how a single category changes over time by manually gathering its yearly values. This gives us insights into year-to-year trends (net increases or decreases) and the ability to explore different individual financial statement lines.
+
+* * *
