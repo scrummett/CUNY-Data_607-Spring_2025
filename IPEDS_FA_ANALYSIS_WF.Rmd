@@ -1,0 +1,136 @@
+---
+title: "Project_Proposal_WF"
+author: "William Forero"
+output:
+  pdf_document: default
+  html_document: default
+---
+---
+title: DATA 606 Data Project Proposal
+author: 
+---
+
+### Data Preparation
+
+```{r}
+library(tidyverse)
+```
+
+```{r setup, echo=TRUE, results='hide', warning=FALSE, message=FALSE}
+# load data
+raw_ipeds <- read_csv("https://raw.githubusercontent.com/william-forero/Data-607/refs/heads/main/2223_IPEDS_CUSTOM_DATA_FILE.csv")
+```
+
+```{r}
+glimpse(raw_ipeds)
+```
+
+```{r}
+head(raw_ipeds)
+```
+
+```{r}
+summary(raw_ipeds)
+```
+
+```{r}
+ipeds_renamed <- raw_ipeds |>
+  rename(
+    unit_id = 'unitid',
+    inst_name = 'institution name',
+    year = 'year',
+    state = 'HD2023.FIPS state code',
+    inst_2_4_yr = 'HD2023.Sector of institution',
+    ft_ret_rate = 'EF2023D.Full-time retention rate, 2023',
+    tot_nbr_ugrd_fa = 'SFA2223.Total number of undergraduates - financial aid cohort',
+    tot_nbr_ugrd = 'SFA2223.Total number of degree/certificate-seeking undergraduate students',
+    nbr_ugrd_degr_awarded = 'SFA2223.Number of degree/certificate-seeking undergraduate students awarded federal, state, local, institutional or other sources of grant aid',
+    perc_ugrd_degr_awarded = 'SFA2223.Percent of degree/certificate-seeking undergraduate students awarded federal, state, local, institutional or other sources of grant aid',
+    tot_aid_degr_awarded = 'SFA2223.Total amount of federal, state, local, institutional or other sources of grant aid awarded to degree/certificate-seeking undergraduate students',
+    avg_aid_degr_awarded = 'SFA2223.Average amount of federal, state, local, institutional or other sources of grant aid awarded to degree/certificate-seeking undergraduate students',
+    tot_grad_rt = 'DRVGR2023.Graduation rate, total cohort',
+    grad_rt_4_yr = 'DRVGR2023.Graduation rate - Bachelor degree within 4 years, total',
+    grad_rt_5_yr = 'DRVGR2023.Graduation rate - Bachelor degree within 5 years, total',
+    grad_rt_6_yr = 'DRVGR2023.Graduation rate - Bachelor degree within 6 years, total',
+  ) |>
+  select(unit_id,inst_name,year,state,inst_2_4_yr,ft_ret_rate,tot_nbr_ugrd_fa,tot_nbr_ugrd,nbr_ugrd_degr_awarded,perc_ugrd_degr_awarded,tot_aid_degr_awarded,tot_aid_degr_awarded,avg_aid_degr_awarded,tot_grad_rt,grad_rt_4_yr,grad_rt_5_yr,grad_rt_5_yr,grad_rt_6_yr)
+
+head(ipeds_renamed)
+```
+
+
+### Research question 
+
+Is there a statistically significant relationship between the average amount of financial aid awarded and student success outcomes (graduation rates) at undergraduate degree-granting institutions in the United States?
+
+
+### Cases 
+
+The cases are represented by colleges included in the dataset that was pulled from IPEDS. There are a total of 1,563 distinct colleges included in the dataset.
+
+
+### Data collection 
+
+The data is pulled from the Integrated PostSecondary Education Data System (IPEDS) using their custom data file tool. Information was pulled for degree granting 2 and 4 year public institutions within the United Stated for the year 2022-2023. 
+
+
+### Type of study 
+
+This is an observational study.
+
+
+### Data Source 
+
+https://nces.ed.gov/ipeds/datacenter/CDSPreview.aspx?sid=080fa437-d472-40b0-8585-ecaf99adfab5&rtid=5 
+
+
+### Describe your variables?
+
+My dependent variable will be the graduation rate. 
+
+My variables are predominantly quantitative including sums of aid awarded for degree seeking undergraduate students, counts of students awarded, and graduation rates.
+
+The qualitative variables are those that specify if a college is a 2 year or 4 year college and the state.
+
+### Relevant summary statistics 
+
+**Provide summary statistics for each the variables. Also include appropriate visualizations related to your research question (e.g. scatter plot, boxplots, etc). This step requires the use of R, hence a code chunk is provided below. Insert more code chunks as needed.**
+
+```{r Nbr of colleges included}
+ipeds_renamed |>
+  summarise(num_colleges = n())
+```
+
+
+```{r Nbr of colleges included by state}
+ipeds_renamed |>
+  filter(!is.na(state)) |>
+  group_by(state) |>
+  summarise(num_colleges = n(),
+            nbr_stdnt = sum(tot_nbr_ugrd, na.rm = TRUE),
+            nbr_stdnt_awd = sum(nbr_ugrd_degr_awarded, na.rm = TRUE),
+            tot_aid_awarded = sum(tot_aid_degr_awarded, na.rm = TRUE),
+            avg_grad_rate = round(mean(tot_grad_rt, na.rm = TRUE),2))
+```
+
+The graduation rate is slightly right skewed and has a natural floor as the graduation rate cannot be below 0%. 
+
+```{r Visualization on grad rate}
+ipeds_renamed |>
+  filter(!is.na(tot_grad_rt)) |>
+  ggplot(aes(x = tot_grad_rt)) +
+  geom_histogram(binwidth = 5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Graduation Rates", x = "Graduation Rate (%)", y = "Number of Colleges")
+```
+
+
+```{r scatterplot for graduation rate and financial aid awarded}
+ipeds_renamed |>
+  filter(!is.na(tot_grad_rt) & !is.na(avg_aid_degr_awarded)) |>
+  ggplot(aes(x = avg_aid_degr_awarded, y = tot_grad_rt)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Grant Aid vs. Graduation Rate", x = "Avg Aid Awarded", y = "Graduation Rate")
+```
+
+
