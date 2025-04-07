@@ -11,7 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Part 1: Build Table
+# Part 1: Build Table
 
 First, I will load necessary libraries:
 
@@ -83,7 +83,7 @@ glimpse(data)
 print(colnames(data)) 
 ```
 
-## Part 2: Store data in SQL database.
+# Part 2: Store data in SQL database.
 
 This function iterates through the rows and pulls each value from column in the sheet's data and assigns it into each value of the same column in MySQL database table:
 
@@ -118,7 +118,7 @@ for (i in 1:nrow(data)) {
 
 
 
-## Part 3: Transfer data from SQL database to R dataframe.
+# Part 3: Transfer data from SQL database to R dataframe.
 
 This chunk transfers data from the SQL database into R dataframe df:
 
@@ -137,7 +137,7 @@ summary(df)
 ```
 
 
-## Part 4: Missing data strategy
+# Part 4: Missing data strategy
 
 Here I remove irrelevant Timestamp column and preview data:
 
@@ -173,7 +173,17 @@ summary(df)
 summary(df_zeroes_to_means)
 ```
 
+```{r save-data-to-CSV}
+# Write the data to a CSV file}
+write.csv(data, "C:/CUNY_MSDS/DATA607/LAB2/Movie_Reviews.csv", row.names = FALSE)
 
+
+
+# Disconnecting from MySQL
+dbDisconnect(con)
+```
+
+# Part 5: Conclusion
 The summaries above show different statistical properties before and after replacing zeroes with means.
 
 
@@ -186,14 +196,4 @@ The reasons why I decided to replace missing values with means:
 5.  Missing and NA values can cause wrong charts and graphs. This is the reason I didn't replace zeroes with NAs.
 6.  I didn't want to remove rows with zeroes, because it can cause loss of valuable information.
 
-
-
-```{r save-data-to-CSV}
-# Write the data to a CSV file}
-write.csv(data, "C:/CUNY_MSDS/DATA607/LAB2/Movie_Reviews.csv", row.names = FALSE)
-
-
-
-# Disconnecting from MySQL
-dbDisconnect(con)
-```
+* * *
