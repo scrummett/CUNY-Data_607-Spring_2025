@@ -1,0 +1,122 @@
+---
+title: "data_607_assignment_9"
+author: "Maxfield Raynolds"
+date: "2025-03-25"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(httr)
+library(httr2)
+library(jsonlite)
+library(keyring)
+library(glue)
+```
+
+## The New York Times API
+
+The New York Times has provided significant access to their work through an Application Programming Interface (API). Developers or any one looking to access those APIs can register here: <https://developer.nytimes.com/>
+
+#### A query
+
+The code below sets up and executes a query to the New York Times Article Search API and stores the results in a dataframe. The chosen query is "restaurant review". The API key is concealed using the keyring package.
+
+```{r an initial query}
+nyt_api_key <- key_get("nyt")
+
+query1 <- "restaurant+review"
+
+url1 <- paste0("https://api.nytimes.com/svc/search/v2/articlesearch.json?q=",query1,"&api-key=",nyt_api_key,"")
+
+results1 <- fromJSON(url1) |> as.data.frame()
+
+class(results1)
+
+head(results1)
+```
+The following code block extracts the lead paragraph from the second row of the returned query regarding restaurant reviews.
+
+```{r extract and convert to json the lead paragraphs}
+
+leadparagraph <- results1 |> select(response.docs.lead_paragraph) |> rename(lead = response.docs.lead_paragraph)
+
+lead <- leadparagraph$lead[[2]]
+lead
+```
+
+The following code sends the extracted sentence to Azure's language analysis tool and queries for sentiment analysis.
+
+```{r}
+
+send <- paste0('{"kind": "SentimentAnalysis",
+  "parameters": {"modelVersion": "latest"},
+  "analysisInput": {
+    "documents": [{
+        "id": "1",
+        "language": "en",
+        "text":"',lead,'"
+      }
+    ]
+  }
+}')
+
+headers = c(
+  `Content-Type` = 'application/json',
+  `Ocp-Apim-Subscription-Key` = key_get("languagestudiokey"),
+  `Ocp-Apim-Subscription-Region` = 'eastus'
+)
+
+post <- POST(url = "https://data607.cognitiveservices.azure.com/language/:analyze-text?api-version=2024-11-01&showStats={showStats}", 
+             add_headers(.headers = headers),
+             body = send
+             )
+
+tryp <- content(post, as = "parsed")
+
+spec <- fromJSON(toJSON(tryp), flatten = TRUE)
+
+print(spec)
+```
+```{r}
+sentiment <- spec$results$documents$sentiment[[1]]
+
+how <- paste("The results of sentiment analysis indicates that the lead paragraph of the restaurant review is",sentiment)
+
+how
+```
+
+
+### A second query
+
+The code below sets up and executes a query to the New York Times Books API and stores the results in a dataframe. The chosen query is for the current hardcover fiction top 15 bestseller list. 
+
+```{r another query}
+query2 <- "hardcover-fiction"
+
+url2 <- paste0("https://api.nytimes.com/svc/books/v3/lists/current/",query2,".json?api-key=",nyt_api_key,"")
+
+results2 <- fromJSON(url2)$results |> bind_rows()
+
+class(results2)
+
+print(results2)
+```
+The below code shows the average of how many weeks the books have been on the bestsellers list.
+
+```{r average weeks on bestseller list}
+weeks <- results2 |> summarize(avg_weeks_on_list = mean(books$weeks_on_list))
+
+weeks
+```
+```{r plot of weeks that the books have bene on the bestsellers list}
+ggplot(results2, aes(x = reorder(books$title, -books$weeks_on_list), y = books$weeks_on_list)) + geom_col() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(title = "New York Times Hardcover Fictions Books Weeks on Bestsellers List") + xlab("Hardcover Fiction Bestsellers") + ylab("Weeks on Bestsellers List")
+```
+
+
+
+### The NYT API in conclusion.
+
+The New York Times APIs allow for significant direct access to their published work. Being able to properly utilize them, and APIs in general, is a powerful tool for acquiring and extracting data.
