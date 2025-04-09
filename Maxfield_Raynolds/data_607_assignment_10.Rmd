@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+The following code block loads packages.
+
 ```{r packages and sentiment library}
 library(tidytext)
 library(tidyverse)
@@ -21,6 +23,8 @@ get_sentiments("afinn")
 get_sentiments("bing")
 get_sentiments("nrc")
 ```
+
+The following code block loads Lewis Carroll books from the gutenberg project website.
 
 ```{r load specific lewis carroll books from the gutenberg project website}
 #The selected titles were not available from the gutenberg project package so the following code imports them from the gutenberg project website
@@ -48,6 +52,7 @@ carroll_raw <- wonderland |> bind_rows(looking_glass)
 
 Much of the following code is adapted from "Text Mining with R: A Tidy Approach" by Silge & Robinson, available at https://www.tidytextmining.com/
 
+The following code creates a tidy dataframe for the Lewis Carroll texts.
 
 ```{r tidy_carroll}
 tidy_carroll <- carroll_raw |> 
@@ -61,6 +66,8 @@ tidy_carroll <- carroll_raw |>
 tidy_carroll <- unnest_tokens(tidy_carroll,word,text)
 ```
 
+The following code filters the terms labelled for "joy" from the nrc sentiment library.
+
 ```{r filter words labeled with joy from nrc sentiment library, count joy words in Emma}
 nrc_joy <- get_sentiments("nrc") |> 
   filter(sentiment == "joy")
@@ -71,6 +78,8 @@ tidy_carroll |>
   count(word, sort = TRUE)
 ```
 
+The following code analyzes the sentiment for the Lewis Carroll texts using the "bing" library in 80 line sections.
+
 ```{r categorize the sentiment for lewis carroll books using bing library in 80 line sections}
 lewis_carroll_sentiment <- tidy_carroll |> 
   inner_join(get_sentiments("bing")) |> 
@@ -79,11 +88,15 @@ lewis_carroll_sentiment <- tidy_carroll |>
   mutate(sentiment = positive - negative)
 ```
 
+The following code block plots the sentiment of the two Lewis Carroll texts over the course of the book using the "bing" sentiment library.
+
 ```{r plot of sentiment of lewis carrol books}
 ggplot(lewis_carroll_sentiment, aes(index, sentiment, fill = book)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~book, ncol = 2, scales = "free_x")
 ```
+
+The following code analyzes sentiments using the three sentiment lexicons for Alice's Adventures in Wonderland: afinn, bing, and nrc.
 
 ```{r compare sentiment dictionaries}
 alice_wonderland <- tidy_carroll |> 
@@ -111,12 +124,15 @@ bing_and_nrc <- bind_rows(
   mutate(sentiment = positive - negative)
 ```
 
+The following code plots the sentiment for each of the lexicons' analysis of Alice's Adventures in Wonderland. As can be seen NRC has an overall more positive sentiment but all three show a similar fluctuation in sentiment. 
+
 ```{r estimate net sentiment in each section}
 bind_rows(afinn, bing_and_nrc) |> 
   ggplot(aes(index, sentiment, fill = method)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~method, ncol = 1, scales = "free_y")
 ```
+The counts below show the differences in negative vs. positive word counts in the nrc and bing lexicons.
 
 ```{r count of sentiment words in nrc}
 get_sentiments("nrc") |> 
@@ -129,12 +145,15 @@ get_sentiments("bing") |>
   count(sentiment)
 ```
 
-```{r most common positive words in jane austen}
+The following code shows the most common words in Lewis Carroll's texts. 
+
+```{r most common words in Lews Carroll}
 bing_word_counts <- tidy_carroll |> 
   inner_join(get_sentiments("bing")) |> 
   count(word, sentiment, sort = TRUE) |> 
   ungroup() |> print()
 ```
+The following codes plots the most common positive and negative words in the Lewis Carroll's texts.
 
 ```{r plot most common words by sentiment}
 bing_word_counts %>%
@@ -149,11 +168,15 @@ bing_word_counts %>%
        y = NULL)
 ```
 
+
+
 ```{r create custom stop words library}
 custom_stop_words <- bind_rows(tibble(word = c("gutenberg"),  
                                       lexicon = c("custom")), 
                                stop_words)
 ```
+
+The following code creates word clouds from the Carroll texts.
 
 ```{r word cloud}
 tidy_carroll |> 
@@ -161,6 +184,8 @@ tidy_carroll |>
   count(word) |> 
   with(wordcloud(word, n, max.words = 100))
 ```
+
+The following code creates a word cloud of the most common positive and negative sentiment words in the Lewis Carroll works.
 
 ```{r reshape word cloud}
 tidy_carroll %>%
@@ -174,39 +199,16 @@ tidy_carroll %>%
 
 ## Original Sentiment Analysis
 
-The following code is original and not adapted from "Text Mining with R: A Tidy Approach" by Silge & Robinson
+The following code uses the sentimentr package to analyze the Lewis Carroll text by sentence.
 
+This loads the sentimentr package
 ```{r load sentimentr}
 library(sentimentr)
 ```
 
-```{r}
-wonder_text <- read_lines("https://www.gutenberg.org/cache/epub/11/pg11.txt")
+The following code loads the Lewis Carroll texts, separates them by sentence and combines them into a dataframe for analysis. This dataframe is, for these purposes, is tidy.
 
-wonder <- str_c(wonder_text, collapse = " ")
-
-wonder1 <- get_sentences(wonder)
-wonder1 <- as.data.frame(unlist(wonder))
-class(wonder1)
-sentiment(wonder)
-
-?sentiment
-
-mytext <- c(
-    'do you like it?  But I hate really bad dogs',
-    'I am the best friend.',
-    'Do you really like it?  I\'m not a fan'
-)
-
-sentiment(mytext)
-?read_lines
-data(presidential_debates_2012)
-```
-
-
-
-
-```{r}
+```{r organize and tidy the lewis carroll text into sentences}
 wonder <- read_lines("https://www.gutenberg.org/cache/epub/11/pg11.txt")
 
 wonder <- str_c(wonder, collapse = " ")
@@ -238,3 +240,20 @@ glass <- as.data.frame(glass, nm = "text") |> unnest_tokens(sentence, text, toke
 carroll_sentences <- wonder |> bind_rows(glass)
 ```
 
+The following code uses sentimentr to analyze the sentiment of the Lewis Carroll works by chapter.
+
+```{r sentiment analysis by chapter wtih sentimentr}
+library(magrittr)
+
+carroll_sentiment_chapter <- carroll_sentences |> 
+  get_sentences() %$% 
+  sentiment_by(sentence, list(book, chapter))
+
+head(carroll_sentiment_chapter)
+```
+The following plot shows the average sentiment throughout the two books by chapter.
+```{r }
+ ggplot(carroll_sentiment_chapter, aes(chapter, ave_sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 1, scales = "free_y")
+```
