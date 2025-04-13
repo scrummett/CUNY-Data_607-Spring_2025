@@ -1,0 +1,85 @@
+---
+title: "DATA 607 Assignment 9"
+author: "Samuel C"
+date: "2025-03-30"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+As data scientists, API's are very valuable to efficiently share data stored across and accessed through different spaces. They also make it very easy to edit or recieve information on projects hosted elsewhere. For our purposes, the NYT Developers APIs are useful to start exploring how to search for data stored by others on their websites.
+
+## Load Packages
+
+To get started we first must load in a select group of packages
+
+```{r}
+library(httr)
+library(tidyverse)
+library(jsonlite)
+library(lubridate)
+library(stringr)
+```
+
+## Setting up a connection
+
+First we must connect to the NYT best sellers API. In order to do this we must use a personalized API key. I have stored my API key in a .csv file saved on github, and can read it in from there.
+```{r}
+api_key <- read.csv("https://raw.githubusercontent.com/scrummett/DATA607/refs/heads/main/NYT-API-key.csv")
+my_key <- api_key$API.Key[1]
+```
+
+From here we can set up the connection with the URL provided by the NYT website.
+```{r}
+url <- paste0("https://api.nytimes.com/svc/books/v3/reviews.json?author=Haruki%20Murakami&api-key=", my_key)
+nyt_connect <- GET(url)
+nyt_connect
+```
+We can look at "Status" to see "200", confirming that we are connected to the API. From here we can begin to explore the JSON file.
+
+## Converting JSON
+We have access to the raw data that includes reviews for all of Haruki Murakami's books from the NYT, however it is not in a very readable form for us yet. We must convert it to a JSON file (content), and then to a R dataframe (fromJSON). 
+```{r}
+nyt_books <- fromJSON(content(nyt_connect, "text", encoding = "UTF-8"))
+str(nyt_books)
+```
+We have successfully converted our data into something more readable, and can see that there are 20 observations in a dataframe under "results". This is where we will continue our work by creating a dataframe of just these results.
+```{r}
+results <- nyt_books$results
+results
+```
+Now we can begin to tidy the data.
+
+## Tidying
+First, I want to separate out the dates of the reviews as days, months, and years.
+```{r}
+results <- results |> 
+  mutate(
+    year = year(publication_dt),
+    month = month(publication_dt),
+    day = day(publication_dt)) |> 
+  select(-publication_dt)
+```
+Next we can separate out the ISBN numbers for his books.
+```{r}
+results <- results |> 
+  mutate(isbn13 = str_remove_all(results$isbn13, 'c\\(|\\)|"'))
+results <- results |> 
+  separate_rows(isbn13, sep = ", ")
+results
+```
+The data is now tidied. For the sake of looking at a nicer set of data, I am going to filter out two columns where every value is the same.
+```{r}
+results <- results |> 
+  select(-uuid, -uri)
+results
+```
+
+# Conclusion
+While interfacing through an API was new and sometimes difficult, I found that the amount of R code needed (at least here) was spare. The real challenge for me was understanding exactly what URLs I would need, and how to establish the connection with my key. After that, converting the information into something more readable and then tidying was fairly simple. I appreciate the ease of use that the NYT API provided, as I can imagine how connecting might get more difficult with less clear instructions.
