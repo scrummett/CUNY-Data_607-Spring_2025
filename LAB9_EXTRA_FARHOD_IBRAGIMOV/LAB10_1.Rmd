@@ -1,0 +1,184 @@
+---
+title: "LAB10_1"
+author: "Farhod Ibragimov"
+date: "2025-04-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(httr)
+library(jsonlite)
+library(tidyr)
+library(purrr)
+```
+
+## Description
+
+This is my ongoing research project I am working on.
+
+In this project I am using my several favorite libraries to download, make data tidy, and joining in one dataset. As I mentioned before, this is my ongoing not finished project. I am planning to add other datasets and make a research how inflation affects median incomes.
+
+## Downloading data
+
+Here I wrote a function that:
+
+-   Connects to my GitHub repo
+
+-   Finds all files in specified folder
+
+-   Converts links to raw download format
+
+Then I plug in my GitHub username, repo name, folder path, and branch name to get the list of data file links. It prints out all the file URLs.
+
+```{r}
+
+get_github_raw_urls <- function(user, repo, path, branch = "main") {
+  api_url <- paste0("https://api.github.com/repos/", user, "/", repo, "/contents/", path, "?ref=", branch)
+  
+  response <- GET(api_url)
+  
+  contents <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  
+  files <- contents[contents$type == "file", "path"]
+  
+  urls <- paste0("https://raw.githubusercontent.com/", user, "/", repo, "/", branch, "/", files)
+  
+  return(urls)
+}
+
+user <- "farhodibr"
+repo <- "CUNY-SPS-MSDS"
+path <- "DATA607/LAB10/DATA"  
+branch <- "main"
+
+urls <- get_github_raw_urls(user, repo, path, branch)
+print(urls)
+
+
+```
+
+## Read excel file and clean it.
+
+Since all datasets I used are build using the same way and format in excell I wrote a function that:
+
+-   Downloads an Excel file (if it's a URL)
+
+-   Reads a name from a specific cell (B7) to use as the dataframe name.
+
+-   Skips some rows (headers, title rows)
+
+-   Cleans the name (removes punctuation and spaces)
+
+-   Loads the data into R and saves it using that cleaned name
+
+```{r}
+read_file_to_df <- function(file_URL, name_cell = "B7", sheet = 1, data_range = NULL) {
+ 
+  if (grepl("^https?://", file_URL)) {
+    temp_file <- tempfile(fileext = ".xlsx")
+    GET(file_URL, write_disk(temp_file, overwrite = TRUE))
+    file_path <- temp_file
+  } else {
+    file_path <- file_URL
+  }
+
+  name_df <- read_excel(file_path, sheet = sheet, range = name_cell, col_names = FALSE) |>
+    pull(1) |>
+    as.character()
+
+  clean_name <- gsub("[[:punct:]]", "_", name_df)
+  clean_name <- gsub("\\s+", "", clean_name)
+  name_df <- make.names(clean_name)
+
+  if (is.null(data_range)) {
+    data <- read_excel(file_path, sheet = sheet)
+  } else {
+    data <- read_excel(file_path, sheet = sheet, range = data_range)
+  }
+
+  data <- data[-(1:7), ]
+  
+  data <- data[-1, ]
+  colnames(data) <- as.character(data[1, ])
+  data <- data[-1, ]
+  
+  assign(name_df, data, envir = .GlobalEnv)
+ 
+  return(invisible(name_df))
+}
+
+```
+
+## Creating a vector with the names of datasets
+
+Here the code loops through each file and creates `created_dataframes`vector containing the names of datasets.
+
+```{r}
+created_dataframes <- c()
+
+for (url in urls) {
+  df_name <- read_file_to_df(url)
+  
+  df_name
+  
+  created_dataframes <- c(created_dataframes, df_name)
+}
+```
+
+## Tidying dataframes
+
+This part does following:
+
+-   Loop through all the other datasets I loaded:
+
+-   Turns them into long/tidy format
+
+-   Gives each a new column name like `avg_price_of_<dataset_name>`
+
+-   Makes sure the year is an actual number (not text)
+
+-   Saves each tidy version with `_tidy` added to the name
+
+```{r}
+for (name in created_dataframes) {
+  tidy_df_name <- paste0(name, "_tidy")
+  
+  df <- get(name)
+  
+  tidy_df <- df|> 
+    pivot_longer(
+      cols = -Year,
+      names_to = "month",
+      values_to = paste0("avg_price_of_", name)
+    )
+  
+  tidy_df$Year <- as.integer(tidy_df$Year)
+  assign(tidy_df_name, tidy_df, envir = .GlobalEnv)
+  head(tidy_df_name)
+}
+
+```
+
+## Creating one dataset by joining all datasets
+
+Since previous function creates tidy datasets by extending dataset's name with `_tidy,`here I create a vector to store tidy datasets names.
+
+```{r}
+tidy_names <- paste0(created_dataframes, "_tidy")
+```
+
+```{r}
+tidy_dfs_list <- lapply(tidy_names, get)
+joined_data_tidy <- reduce(tidy_dfs_list, full_join, by = c("Year", "month"))
+glimpse(joined_data_tidy)
+```
+```{r}
+print(joined_data_tidy)
+```
+

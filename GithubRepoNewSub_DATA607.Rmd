@@ -1,0 +1,81 @@
+---
+title: "Assignment9_DATA607"
+author: "Aaliyah John-Harry"
+date: "2025-04-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(openintro)
+```
+
+
+```{r}
+data("fastfood", package='openintro')
+
+mcdonalds <- fastfood %>%
+  filter(restaurant == "Mcdonalds")
+dairy_queen <- fastfood %>%
+  filter(restaurant == "Dairy Queen")
+
+fastfood
+head(mcdonalds)
+head(dairy_queen)
+```
+- What is the probability that a randomly chosen McDonald's product has more than 1000 total calories?
+- What is the probability that a randomly chosen Dairy Queen product has more than 25 total carbs?
+
+```{r}
+mcdonalds %>% 
+  filter(calories > 1000) %>%
+  summarise(percent = n() / nrow(mcdonalds))
+
+```
+```{r}
+dairy_queen %>% 
+  filter(total_carb > 25) %>%
+  summarise(percent = n() / nrow(dairy_queen))
+```
+How can we classify high calorie and low calorie products sold by McDonald's? 
+How many are there of each?
+```{r}
+mcdonalds <- mcdonalds %>%
+  mutate(calorie_level = ifelse(calories > 1000, "High", "Low"))
+head(mcdonalds)
+```
+
+```{r}
+mcdonalds %>%
+  group_by(calorie_level) %>%
+  summarise(count = n())
+```
+Top 10 highest calorie items at McDonald's
+```{r}
+mcdonalds %>%
+  arrange(desc(calories)) %>%
+  head(10)
+```
+How many unique items are sold by each fast food restaurant?
+```{r}
+fastfood %>%
+  group_by(restaurant) %>%
+  summarise(unique_items = n_distinct(item))
+```
+
+
+#Daniel Hanasab changes : simple bar chart showing how many “High” and “Low” calorie items McDonald’s sells:
+library(ggplot2)
+
+ggplot(mcdonalds, aes(x = calorie_level, fill = calorie_level)) +
+  geom_bar() +
+  labs(title = "McDonald's Products by Calorie Level",
+       x = "Calorie Category",
+       y = "Number of Items") +
+  theme_minimal()
+

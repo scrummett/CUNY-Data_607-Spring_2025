@@ -1,0 +1,34 @@
+---
+title: "data_607_repo_assignment"
+author: "Maxfield Raynolds"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages}
+library(tidyverse)
+```
+
+## Some basic code for the repo assignment
+
+The following code loads a data set about the features of zoo animals.
+
+```{r load the dataset}
+zoo_df <- read_csv("https://raw.githubusercontent.com/mraynolds/data_607/refs/heads/main/zoo_data-1.csv")
+
+head(zoo_df)
+```
+
+The following code uses across to convert all the binary indicators of animal features to logical.
+
+```{r The following code converts all of the binary columns to logical}
+zoo <- zoo_df |> 
+  mutate(across(!animal_name & !legs,as.logical))
+
+head(zoo)
+```
+

@@ -1,0 +1,70 @@
+---
+title: "DATA607 Project 2c"
+author: "Gullit Navarrete"
+date: "2025-03-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(patchwork)
+```
+
+# Data Loading
+## Barakat Adigun's data
+This R Markdown will be using the dataset provided by Barakat Adigun from the discussion board. The following code is used to load and observe the dataset:
+```{r loading, echo=TRUE}
+product_sales <- read_csv(
+  "https://raw.githubusercontent.com/GullitNa/DATA607-Project2/main/BarakatAdigunProduct.csv")
+product_sales
+```
+# Data Cleaning
+This dataset has a more straightforward load compared to the other datasets I explore in this project. I plan to remove the word "Sales" from the month columns for clarity as a simple cleaning measure with this dataset and move on to pivoting from there.
+```{r cleaning, echo=TRUE}
+product_sales_long <- product_sales %>%
+  pivot_longer(
+    cols = ends_with("Sales"),
+    names_to = "Month",
+    values_to = "Sales"
+  )
+product_sales_long
+```
+
+# Data Transformation
+Although there is still room for tidying the data, which as a result I will proceed with pivoting the data from its already wide structure to a long dataframe. In combination of the two prospects, I will instead have these columns combine into one singular column now that it's in a long format.
+```{r transformation, echo=TRUE}
+product_sales_long %>%
+  mutate(Month = sub(" Sales", "", Month))
+head(product_sales_long)
+```
+
+# Analysis
+## Summary
+After the transformation of the data, I aim to analyze the data in terms of comparing the regional performance of the products. Just based off the summary, the east region had sold the most products with 5175, and south is in 2nd with 3675, and the north region sold the least with 2175.
+```{r regional, echo=TRUE}
+total_by_region <- product_sales_long %>%
+  group_by(Region) %>%
+  summarize(TotalSales = sum(Sales)) %>%
+  arrange(desc(TotalSales))
+total_by_region
+```
+## Plotting
+This demonstration is for visualizating the data. Proving as an example for further analysis of other categories in this dataset/dataframe.
+```{r plotting, echo=TRUE}
+ggplot(total_by_region, aes(x = reorder(Region, -TotalSales), y = TotalSales)) +
+  geom_col() +
+  labs(
+    title = "Regional Performance",
+    x = "Region",
+    y = "Total Sales"
+  )
+```
+
+# Conclusion
+Within Barakat's provided dataset, I loaded in the wide dataset with the intention to pivot into a long format from the getgo. This was in an attempt to tidy the data by absorbing the months into a singular column as well as altering the name of the months, all for improved clarity. Finally, followed up by summarizing the data's total sales in descending order per region and leading up with a bar graph for demonstration purposes to visualize any analytically attempts within this dataset/dataframe.
+
+* * *
