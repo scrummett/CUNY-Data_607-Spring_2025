@@ -1,0 +1,129 @@
+---
+title: "Data607 Assignment 4"
+author: "Samuel C"
+date: "2025-02-21"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Overview
+
+Given an untidy dataset, I have been tasked with cleaning it up in order to perform an analysis. This dataset include flight information from two different airlines flying out of five different cities. The data also breaks down if the flights were delayed or on time. We will look at the arrival delays between the two airlines
+
+Getting Started
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+untidy_flights <- read.csv("https://raw.githubusercontent.com/scrummett/DATA607/refs/heads/main/UntidyFlights.csv")
+```
+Here we have loaded the proper packages, and saved the data provided to us (that I also stored on github) in a table. From here we need to clean up the data.
+
+Tidying the Data
+```{r}
+untidy_flights <- untidy_flights |> 
+  rename("Airline" = "X",
+         "Status" = "X.1")
+untidy_flights <- untidy_flights |> 
+  rename_with(~ gsub(".", "_", .x, fixed = TRUE))
+```
+Here we are renaming the first two columns with proper labels, "Airline" and "Status". Additionally, we are replacing the "." separating words with "_", however we will shortly change it again.
+
+```{r}
+untidy_flights <- untidy_flights |> 
+  filter(!is.na(Los_Angeles))
+```
+Here we are removing the rows with no data in them by filtering out any row that doesn't have a value for "Los_Angeles".
+
+```{r}
+untidy_flights <- untidy_flights |> 
+  mutate(Airline = na_if(Airline, "")) |> 
+  fill(Airline)
+```
+We need to replace the missing values in "Airline". Here we are taking the value that came before the missing data and filling it into that empty spot.
+
+```{r}
+untidy_flights <- untidy_flights |> 
+  mutate(Seattle = as.numeric(gsub(",", "", Seattle)))
+
+untidy_flights |> 
+  mutate(Seattle = as.numeric(Seattle))
+```
+The value of the Alaskan flight from Seattle is currently entered as a character instead of a number due to the ",". First, we can remove this, then make sure that the value is read as a number, followed by turning the entire column into a numerical column. We do this in order to create a single column of the number of flights, including those from other destinations.
+
+```{r}
+untidy_flights <- untidy_flights |> 
+  pivot_longer(
+    cols = Los_Angeles:Seattle,
+    names_to = "City",
+    values_to = "n_Flights")
+```
+Here we have created a new column for all cities, as well as combined the columns that held information on total flights from these cities.
+
+```{r}
+tidy_flights <- untidy_flights |> 
+  mutate(City = gsub("_", " ", City))
+```
+Lastly, we replaced all "_" in the "City" column with spaces. Our data is now much tidier and ready for analysis.
+
+Data Analysis
+First we can take a look at our data broken up by airline, delay status and city.
+```{r}
+tidy_flights |> 
+  ggplot(aes(x = City, y = n_Flights, fill = factor(Airline))) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  facet_wrap(~Status) +
+  labs(y = "Total Flights", fill = "Airline") +
+  ggtitle("Proportions of Delays by City") + 
+  coord_flip()
+```
+Here we can quickly visualize where the most delays are happening and from which airlines they happen with. We can see a large number of on time flights coming out of Phoenix, seemingly disproportionate to the rest of the flights coming from other cities across both airlines.
+
+```{r}
+flight_delays <- tidy_flights |> 
+  group_by(Airline) |> 
+  summarise(
+    Total_Flights = sum(n_Flights),
+    Delayed_Flights = sum(ifelse(Status == "delayed", n_Flights, 0)),
+    OnTime_Flights = sum(ifelse(Status == "on time", n_Flights, 0)),
+    Delayed_Percentage = (Delayed_Flights / Total_Flights) * 100
+  )
+flight_delays
+
+flight_delays |> 
+ggplot(aes(x = Airline, y = Delayed_Percentage, fill = Airline)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Percentage of Delayed Flights by Airline", 
+       x = "Airline", y = "Percentage of Delayed Flights")
+```
+Here we can see that while "ALASKA" doesn't have as many total delayed flights as "AM WEST", they have a higher delay percentage by nearly 3%. This could perhaps be influenced by the sheer number of on time flights from "AM WEST" coming out of Phoenix, dropping their delay percentage drastically.
+
+```{r}
+flight_delays_phoenix <- tidy_flights |> 
+  group_by(Airline) |> 
+  filter(City != "Phoenix") |> 
+  summarise(
+    Total_Flights = sum(n_Flights),
+    Delayed_Flights = sum(ifelse(Status == "delayed", n_Flights, 0)),
+    OnTime_Flights = sum(ifelse(Status == "on time", n_Flights, 0)),
+    Delayed_Percentage = (Delayed_Flights / Total_Flights) * 100
+  )
+flight_delays_phoenix
+
+flight_delays_phoenix |> 
+ggplot(aes(x = Airline, y = Delayed_Percentage, fill = Airline)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Percentage of Delayed Flights by Airline", 
+       x = "Airline", y = "Percentage of Delayed Flights")
+```
+Here we can see that when we exclude Phoenix, the percentage of delayed flights from "AM WEST" increases by 8%!
+
+Conclusion
+
+Data might come in many different forms, and you may not be able to anticipate the ways in which it needs to be tidied upon initial inspection. For instance, I did not anticipate needing to change "Seattle" to a numerical vector, but as I entered the data wrong, it became necessary to continue.
+Additionally, from this data we can glean that while "ALASKA" has a higher percentage of delays than "AM WEST", we can narrow the data down a bit to see that across most cities "AM WEST" has a greater portion of their flights delayed.

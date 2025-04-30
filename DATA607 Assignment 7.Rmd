@@ -1,0 +1,173 @@
+---
+title: "DATA607 Lab 7"
+author: "Samuel C"
+date: "2025-03-16"
+output:
+  html_document: default
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+In this lab, we have been tasked with creating many different file types
+from a list of inventory at a local store. These file types include
+JSON, HTML, XML and Parquet. Once the data is transformed into the
+correct format, I will export it to the file type for easy storage.
+Additionally I will go over the pros and cons of each file type.
+
+**Load Packages**
+
+In this lab, I researched many different packages to help format data
+appropriately for export.
+
+```{r}
+library(tidyverse)
+library(arrow)
+library(repurrrsive)
+library(jsonlite)
+library(XML)
+library(xml2)
+library(tableHTML)
+```
+
+Once these were installed I could begin.
+
+**Import and Cleaning**
+
+I first saved the data given in a pdf into a CSV file, which I then
+saved to Github to import.
+
+```{r}
+lab7data <- read.csv("https://raw.githubusercontent.com/scrummett/DATA607/refs/heads/main/lab7data.csv", row.names = NULL)
+```
+
+However, due to the number of columns and the number of values separated
+by commas, I must adjust the table.
+
+```{r}
+colnames(lab7data) <- c(colnames(lab7data)[-1], "Variation.Details2")
+lab7data <- lab7data |> 
+  mutate(Variation.Details = paste(Variation.Details, Variation.Details2, sep = ",")) |> 
+  select(!Variation.Details2)
+```
+
+Here I have shifted the column names left by one, named the furthest
+right column, then combined the values from the two columns containing
+item details into one column. From here we can create our different
+files.
+
+**JSON**
+
+I will start with our easiest files to code, that being a JSON file.
+Fortunately, the package "jsonlite" makes this incredibly easy for us.
+
+```{r}
+toJSON(lab7data)
+```
+
+This converts our data into JSON format, from which we can export it.
+
+```{r}
+exportJSON <- toJSON(lab7data)
+write(exportJSON, "C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.JSON")
+JSONtest <- fromJSON("C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.JSON")
+print(JSONtest)
+```
+
+Here we have saved it as a JSON file, as well as called that same file
+to test it to see if our save has worked. This table demonstrates that
+we have saved it correctly.
+
+**Parquet**
+
+Next is saving our data to a parquet file, which is made simple by the
+package "arrow".
+
+```{r}
+write_parquet(lab7data, "C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.parquet")
+```
+
+Here we have simply taken our data and saved it as a parquet file.
+
+```{r}
+lab7parquet <- open_dataset("C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.parquet")
+head(lab7parquet) |> collect()
+```
+
+Again we have called that saved file and presented it as a table,
+showing that we have successfully created a parquet file.
+
+**HTML**
+
+Again, this is made simple ny a package, this package being called
+"tableHTML". It takes data from a table and converts it into a table in
+html.
+
+```{r}
+lab7HTML <- tableHTML(lab7data)
+write_tableHTML(lab7HTML, file = "C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.html")
+print(lab7HTML)
+cat(lab7HTML)
+```
+
+Here we have saved the file locally, and also confirmed the table has
+been saved as HTML.
+
+**XML**
+
+I could not find any package that would simply convert our data into an
+XML file, so instead I wrote a function that would manually convert it
+into a more readable XML format.
+
+```{r}
+xml_data <- xml_new_root("lab7data")
+lab7data |> 
+  pmap(function(Category, Item.Name, Item.ID, Brand, Price, Variation.ID, Variation.Details) {
+    node <- xml_add_child(xml_data, "Inventory")
+    xml_add_child(node, "Category", Category)
+    xml_add_child(node, "Item.Name", Item.Name)
+    xml_add_child(node, "Item.ID", Item.ID)
+    xml_add_child(node, "Brand", Brand)
+    xml_add_child(node, "Price", Price)
+    xml_add_child(node, "Variation.ID", Variation.ID)
+    xml_add_child(node, "Variation.Details", Variation.Details)
+  })
+write_xml(xml_data, "C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.xml")
+read_xml_data <- read_xml("C:/Users/crumm/OneDrive/Documents/MSDS Spring 2025/DATA607 Labs/lab7data.xml")
+cat(as.character(read_xml_data))
+```
+
+Additionally, here we have saved the file, then called it. This makes
+sure our save was a success.
+
+**Pros and Cons**
+
+JSON - Some pros of are that data is stored in smaller size among small
+and medium datasets, and is often easy to read by actual people. Some
+cons are that it cannot support dates as data, as well as you cannot
+make comments within it.
+
+Parquet - Storing data in columns rather than rows allows for more
+efficient data storage, therefore these files are typically smaller in
+size. Data can be queried faster as well due to being stored in columns.
+However, unlike JSON files, the data is not readable by humans.
+
+HTML - This is the universal standard - all browsers support it and thus
+can be easily accessed. Data can also be presented in highly
+customizable tables. However, other languages such as JavaScript are
+needed to present information in more compelling ways. Additionally,
+quite a lot of coded is needed to store data that is simply stored in a
+CSV, or JSON file.
+
+XML - Some pros are that it supports Unicode, and therefore can be
+accessed across languages. Additionally, you can perform changes to the
+data without affecting data presentation, and it is human readable. Unfortunately, it is fairly complex and this makes for larger sized files, and there everything is stored as text rather than any other data types. 
+
+##Conclusion
