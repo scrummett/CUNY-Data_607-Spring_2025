@@ -1,0 +1,45 @@
+---
+title: "Class Repo New Submission"
+author: "Gillian McGovern, addition by Maxfield Raynolds"
+date: "2025-04-07"
+output: html_document
+---
+
+## Overview
+
+The tidyverse function I am going to look at is `between` from dplyr.
+
+## Load the Libraries
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+data(flights)
+```
+
+
+## Between Function
+
+I chose `between` because it's a way more efficient way to do x >= left & x <= right which I tend to do a lot.
+
+Let's test out the between function using `nycflights`:
+
+```{r}
+filter(flights, between(distance, 800, 1500))
+```
+
+Now we can easily see the filtered distance flights without typing out distance >= 800 & x <= 1500.
+
+---
+Addition by Maxfield Raynolds:
+
+## Inverse of between!
+
+In the interest of using between, we could also use the inverse of between by including an exclamation point!
+
+Using the !between() we can filter all of the flights that are less than 800 or more than 1500 miles.
+
+```{r using !between}
+filter(flights, !between(distance, 800, 1500))
+```
+

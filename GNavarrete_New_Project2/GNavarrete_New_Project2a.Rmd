@@ -1,0 +1,122 @@
+---
+title: "DATA607 Project 2a"
+author: "Gullit Navarrete"
+date: "2025-03-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(patchwork)
+```
+
+# Data Loading
+## Daniel Hanasab's 
+This R Markdown will be using the dataset provided by Daniel Hanasab from the discussion board. This dataset covers three major cities (New York, Los Angeles, and Chicago) and their corresponding temperatures/humidities through the first three months of the year (January, February, and March). The following code is used to load and observe the dataset:
+```{r data-loading, echo=TRUE}
+dan_cities <- read_csv(
+  "https://raw.githubusercontent.com/GullitNa/DATA607-Project2/main/DanielHanasabCities.csv",
+  col_types = cols(
+    Temp_Jan = col_character(),
+    Temp_Feb = col_character(),
+    Temp_Mar = col_character(),
+    Humid_Jan = col_character(),
+    Humid_Feb = col_character(),
+    Humid_Mar = col_character()
+  )
+)
+dan_cities
+```
+# Data Cleaning
+This dataset may seem simple to read on the surface, but requires additional coding to be properly read in the first place. col_types are used to encode text that contain special characters such as the degrees symbol ° by forcing R to read them as character strings, and even then, the rest of the .csv doesn't show only the 3 cities of New York and the rest of the untidy columns such as different temperatures (unreadable text next to the numbers) and humidity columns for the first 3 months of the year. The foremost issue at the moment is Rstudio's inability to read the characters despite the dataset being read into a dataframe. I aim to fix this using code to specifically make sure the numbers/integers are displayed rather than just read by extracting those numbers/integers away from the special characters/symbols.
+
+```{r data-cleaning, echo=TRUE}
+dan_cities_tid <- dan_cities %>%
+  mutate(
+    across(starts_with("Temp"), ~ parse_number(.)),
+    across(starts_with("Humid"), ~ parse_number(.))
+  )
+```
+
+# Data Tidy Transformations
+The goal of this cleanup is to tidy the data for analysis, so that involves turning this into a long format with combined columns to reduce redundancy and then go back to its wide structure with "Measure" separated into the 2 column types that use measurements to increase clarity/visibility of all data in comparison to its original format. 
+```{r cleanup, echo=TRUE}
+dan_cities_tidy <- dan_cities_tid %>%
+  pivot_longer(
+    cols = -City,
+    names_to = c("Measure", "Month"),
+    names_sep = "_",
+    values_to = "Value"
+  ) %>%
+  pivot_wider(
+    names_from = Measure,
+    values_from = Value
+  ) %>%
+  mutate(
+    Month = factor(Month, 
+                   levels = c("Jan", "Feb", "Mar"),
+                   labels = c("January", "February", "March"))
+  ) %>%
+  arrange(City, Month)
+dan_cities_tidy
+```
+
+# Analysis
+## Summary
+Shown is the summary for the average temperature and average humidity in each cities in the first 3 months of the year. Where Chicago tends to be the coldest with 32.6°F and by correlation, has the highest average humidity of 77.6%. Whereas Los Angeles is the warmest with 61°F with the lowest humidity compared to the other 2 cities of 62.6%. 
+```{r final-analysis, echo=TRUE}
+city_summary <- dan_cities_tidy %>%
+  group_by(City) %>%
+  summarize(
+    Avg_Temperature = mean(Temp),
+    Avg_Humidity = mean(Humid)
+  )
+city_summary
+```
+## Plotting
+Another way to analyze this data would be through visualization; and also by comparing climate differences between New York, Los Angeles, and Chicago. First, I'll be plotting the "Temp" or temperature of the data corresponding to each city:
+```{r transform-temperature, echo=TRUE}
+temperature_plot <- dan_cities_tidy %>%
+  ggplot(aes(x = Month, y = Temp, color = City, group = City)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Temperature Trends by City",
+    x = "Month",
+    y = "Temperature (F)"
+  )
+temperature_plot
+```
+
+Now here is the "Humid" or humidity of the corresponding cities for comparison, and additionally I'll include the summary statistics to calculate the average temperature and humidity for each city in the following code block:
+```{r transform-humidity, echo=TRUE}
+humidity_plot <- dan_cities_tidy %>%
+  ggplot(aes(x = Month, y = Humid, color = City, group = City)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Humidity Trends by City",
+    x = "Month",
+    y = "Humidity (%)"
+  )
+humidity_plot
+```
+
+## Correlation
+As This correlation between the temperature and humidity is visible also within the line graphs from early which I combine using the "patchwork" package. Additionally, it tells us that as the months go by from January to March, the temperatures increase and the humidity decreases.
+```{r temp_hum_summ, echo=TRUE}
+city_summary
+temperature_plot + humidity_plot
+```
+
+# Conclusion
+In my example of analysis and transformation, I started out with an unreadable dataset (mainly due to the °F symbol) about a wide untidy dataset of 3 cities and their temperatures and humidities and read that data from the csv as character strings, later parsing out the numeric portion of these strings by removing the symbols outright. Addition cleanup measures including transformation which would include using pivot commands to make sure each row represents a single city and corresponding month observations for temperature and humidity in a long format.
+These factors allowed me to observe and compare 2 graphs on the manner as well as generate the summary for a more detailed view on the dataset.
+
+* * *

@@ -1,0 +1,243 @@
+---
+title: "DATA 607 Project 2"
+author: "Samuel C"
+date: "2025-03-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## **Overview**
+
+In this project I have chosen three datasets provided from my classmates to tidy and clean. These datasets involve sales data, weather data across different cities, and lastly emissions data across different countries. Not only will these datasets be tidied, I will also perform a bit of exploratory data analysis in order to consider possible relationships among the data in each dataset.
+
+**Getting Started**
+
+First, we must load the packages and data we will use. I have stored the data on my github across three separate .csv files.
+
+```{r}
+library(tidyverse)
+untidy_emissions <- read.csv("https://raw.githubusercontent.com/scrummett/DATA607/refs/heads/main/Total%20Emissions%20Per%20Country%20(2000-2020).csv")
+untidy_sales <- read.csv("https://raw.githubusercontent.com/scrummett/DATA607/refs/heads/main/salesdata.csv")
+untidy_weather <- read.csv("https://raw.githubusercontent.com/scrummett/DATA607/refs/heads/main/weatherdata.csv")
+```
+
+Now with the data loaded, I will begin tidying and EDA from the easiest to the most intensive.
+
+**Sales Data**
+
+```{r}
+head(untidy_sales)
+```
+
+This dataset has sales per month separated out across different columns, however a clean version of this dataset would have "months" be a column itself, and total sales figures being a separate column as well.
+
+```{r}
+untidy_sales <- untidy_sales |> 
+  pivot_longer(
+    cols = ends_with(".Sales"),
+    names_to = "Month",
+    values_to = "Sales")
+head(untidy_sales)
+```
+
+We now have a "tidy" dataset, however the data in the columns can be cleaned up to avoid redundancy.
+
+```{r}
+untidy_sales <- untidy_sales |> 
+  mutate(Month = str_remove(Month, ".Sales"),
+         Product.Name = str_remove(Product.Name, "Product "))
+tidy_sales <- untidy_sales |> 
+  rename("Product" = "Product.Name")
+head(tidy_sales)
+```
+
+After cleaning up observations and changing the title of a column, we now have a tidy dataset of sales data.
+
+```{r}
+tidy_sales |> 
+  ggplot(aes(x = Product, y = Sales)) +
+  geom_boxplot()
+tidy_sales |> 
+  ggplot(aes(x = Region, y = Sales)) +
+  geom_boxplot()
+```
+
+Here we have graphs showing total sales by product and then by region. The graphs show that while products A and B sell similar albeit different amounts, sales of product C lag behind severely. Additionally, the North has far fewer sales than both the South and the East.
+
+One question posed in our discussion forum asked about sales performance by product across regions, which can be seen in the following graph.
+
+```{r}
+tidy_sales |> 
+  ggplot(aes(x = Region, y = Sales, fill = Product)) +
+  geom_boxplot()
+```
+
+From this we can see that product B sells the most across every region, and that product C sells the least.
+
+**Weather**
+
+While our sales data only had months and sales to elongate, the dataset for weather has one more.
+
+```{r}
+head(untidy_weather)
+```
+
+Again, months are spread across the data as separate variables, however we also have temperature and humidity to separate out into individual columns as well.
+
+```{r}
+untidy_weather_left <- untidy_weather |> 
+  pivot_longer(
+    cols = starts_with("Temp_"),
+    names_to = c("Month"),
+    names_prefix = "Temp_",
+    values_to = "Temp_F")
+untidy_weather_right <- untidy_weather |> 
+  pivot_longer(
+    cols = starts_with("Humid_"),
+    names_to = "Month",
+    names_prefix = "Humid_",
+    values_to = "Humidity_Percent"
+  )
+head(untidy_weather_left)
+head(untidy_weather_right)
+untidy_weather <- left_join(untidy_weather_left, untidy_weather_right, by = c("City", "Month"))
+head(untidy_weather)
+```
+
+We now have our individual columns for Month, Temperature and Humidity, however we must trim the fat and get rid of each column that has a single months values.
+
+```{r}
+untidy_weather <- untidy_weather |> 
+  select("City",
+         "Month",
+         "Temp_F",
+         "Humidity_Percent")
+head(untidy_weather)
+```
+
+With this, we have our data tidy, but to make sure we can examine with EDA we must change Temperature and Humidity from character values to integers.
+
+```{r}
+tidy_weather <- untidy_weather |> 
+  mutate(Temp_F = parse_number(Temp_F),
+         Humidity_Percent = parse_number(Humidity_Percent))
+head(tidy_weather)
+```
+
+Now we can begin EDA.
+
+```{r}
+tidy_weather |> 
+  ggplot(aes(x = City, y = Temp_F)) +
+  geom_boxplot()
+tidy_weather |> 
+  ggplot(aes(x = City, y = Humidity_Percent)) +
+  geom_boxplot()
+tidy_weather |> 
+  ggplot(aes(x = reorder(Month, Temp_F), y = Temp_F)) +
+  geom_boxplot()
+tidy_weather |> 
+  ggplot(aes(x = reorder(Month, Temp_F), y = Humidity_Percent)) +
+  geom_boxplot()
+```
+
+Here we have graphs showing temperature and humidity broken down by either city or month. These graphs show that Chicago was the coldest across sampled months while LA was the hottest, while the opposite is true regarding humidity. These graphs also show that temperature increases as months go on while humidity decreases.
+
+We can also look at how temperature and humidity fluctuate over these months across different cities with the following graph.
+
+```{r}
+tidy_weather |> 
+  ggplot(aes(x = reorder(Month, Temp_F))) +
+    geom_point(aes(y = Temp_F, color = "Temp_F"), size = 3) +
+    geom_point(aes(y = Humidity_Percent, color = "Humidity_Percent"), size = 3) +
+    facet_wrap(~ factor(City, levels = c("Chicago", "New York", "Los Angeles"))) +
+    labs(x = "Month", y = "Value") +
+    scale_color_manual(values = c("Temp_F" = "blue", "Humidity_Percent" = "red"))
+```
+
+Here we can see that across all cities, as the months continue from January to March, temperature increases and humidity decreases.
+
+**Emissions**
+
+This is the largest dataset of the three, and needs the most work tidying and cleaning before EDA.
+
+```{r}
+head(untidy_emissions)
+```
+
+While "Item" and "Element" are extended across a "long" format, years are given their own columns, so we can tidy that first. We can also get rid of "Unit" as every "amt" is measured in kilotons and nothing else.
+
+```{r}
+untidy_emissions <- untidy_emissions |> 
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Year",
+    values_to = "Amt_kt"
+  )
+untidy_emissions <- untidy_emissions |> 
+  select(!Unit)
+head(untidy_emissions)
+```
+
+Now that our data is tidy and in a "long" format, we can clean it up for EDA.
+
+```{r}
+tidy_emissions <- untidy_emissions |> 
+  mutate(Element = str_remove(Element, regex("emissions", ignore_case = TRUE)),
+         Element = str_remove(Element, " \\(AR5\\)"),
+         Element = str_remove_all(Element, " \\(|\\)"),
+         Year = str_remove(Year, "X"))
+head(tidy_emissions)
+```
+
+With the data tidied and observations cleaned, we can now begin EDA.
+
+While my classmate suggested looking at overall total emissions per country for each year, and while I do think that would be insightful, processing and presenting that data has proved difficult. Therefore I will look at another suggested potential analysis, that of overall total emissions across source. Additionally, we can look at which element being polluted is the greatest.
+
+```{r}
+
+tidy_emissions |> 
+  filter(Item != "All sectors with LULUCF" &
+           Item != "All sectors without LULUCF") |> 
+  group_by(Item) |> 
+  summarise(Total_Emissions = sum(Amt_kt, na.rm = TRUE), .groups = "drop") |> 
+  ggplot(aes(x = fct_reorder(Item, Total_Emissions, .desc = FALSE), y = Total_Emissions)) +
+  geom_col(fill = "blue") +
+  labs(title = "Total Emissions",
+       x = "Item",
+       y = "Total Emissions (kt)") +
+  coord_flip()
+tidy_emissions |> 
+  filter(Element != "CO2eq") |> 
+  group_by(Element) |> 
+  summarise(Total_Emissions = sum(Amt_kt, na.rm = TRUE), .groups = "drop") |> 
+  ggplot(aes(x = fct_reorder(Element, Total_Emissions, .desc = FALSE), y = Total_Emissions)) +
+  geom_col(fill = "blue") +
+  labs(title = "Total Emissions",
+       x = "Element",
+       y = "Total Emissions (kt)") +
+  coord_flip()
+tidy_emissions |> 
+  filter(Element == "N2O" |
+         Element == "Direct N2O" |
+         Element == "Indirect N2O") |> 
+  group_by(Element) |> 
+  summarise(Total_Emissions = sum(Amt_kt, na.rm = TRUE), .groups = "drop") |> 
+  ggplot(aes(x = fct_reorder(Element, Total_Emissions, .desc = FALSE), y = Total_Emissions)) +
+  geom_col(fill = "blue") +
+  labs(title = "Total Emissions",
+       x = "Element",
+       y = "N2O Emissions (kt)") +
+  coord_flip()
+```
+
+After filtering out variables accounting for all sectors with or without land use change, we find that energy is the greatest driver of emissions. Every item contributes to greater emissions except for one, that being forest land. Looking at the elements graph, we find that the single element emitted the most is CO2. N2O polutes the least, however we cannot get a good idea of how much compared to direct and indirect N2O, so we can break it down even further to find that N2O is producing a fraction of the other elements. Despite this, its equivalency in CO2 is the third largest on this list.
+
+## **Conclusion**
+
+While all of these datasets had some stark differences, whether it be by the number of variables, or by the amount of sheer observations contained within, the process for tidying them was roughly the same across all three. Begin by identifying which columns can be addressed as the same variable, extend the data longer with said variable, and then transform the information into something to process. After that is when we see differences, as each dataset could be broken down differently. This leads to different forms of representation being better for one than another - I would not use columns as I did in emissions data to represent temperature and humidity in weather data. This was insightful on how managing and processing data can be very similar and very different!

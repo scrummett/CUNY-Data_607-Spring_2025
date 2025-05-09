@@ -67,3 +67,15 @@ fastfood %>%
   group_by(restaurant) %>%
   summarise(unique_items = n_distinct(item))
 ```
+
+
+#Daniel Hanasab changes : simple bar chart showing how many “High” and “Low” calorie items McDonald’s sells:
+library(ggplot2)
+
+ggplot(mcdonalds, aes(x = calorie_level, fill = calorie_level)) +
+  geom_bar() +
+  labs(title = "McDonald's Products by Calorie Level",
+       x = "Calorie Category",
+       y = "Number of Items") +
+  theme_minimal()
+
