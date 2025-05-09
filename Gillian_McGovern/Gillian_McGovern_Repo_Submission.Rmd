@@ -1,6 +1,6 @@
 ---
 title: "Class Repo New Submission"
-author: "Gillian McGovern, addition by Maxfield Raynolds"
+author: "Gillian McGovern, addition by Maxfield Raynolds and Aaliyah John-Harry"
 date: "2025-04-07"
 output: html_document
 ---
