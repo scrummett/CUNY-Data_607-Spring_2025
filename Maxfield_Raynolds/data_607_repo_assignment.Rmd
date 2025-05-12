@@ -1,6 +1,6 @@
 ---
 title: "data_607_repo_assignment"
-author: "Maxfield Raynolds"
+author: "Maxfield Raynolds; Updates by Gillian McGovern"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -32,3 +32,15 @@ zoo <- zoo_df |>
 head(zoo)
 ```
 
+## Updates
+
+This code shows how `relocate` makes it easy to move blocks of columns at once:
+
+```{r}
+zoo <- zoo %>%
+  relocate(where(is.numeric), .after = last_col())
+
+head(zoo)
+```
+
+Now all the numeric columns appear after the logical columns.
