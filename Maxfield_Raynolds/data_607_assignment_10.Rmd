@@ -47,10 +47,9 @@ colnames(looking_glass)[1] = "text"
 carroll_raw <- wonderland |> bind_rows(looking_glass)
 ```
 
-
 ## Adapted Sentiment Analysis
 
-Much of the following code is adapted from "Text Mining with R: A Tidy Approach" by Silge & Robinson, available at https://www.tidytextmining.com/
+Much of the following code is adapted from "Text Mining with R: A Tidy Approach" by Silge & Robinson, available at <https://www.tidytextmining.com/>
 
 The following code creates a tidy dataframe for the Lewis Carroll texts.
 
@@ -124,7 +123,7 @@ bing_and_nrc <- bind_rows(
   mutate(sentiment = positive - negative)
 ```
 
-The following code plots the sentiment for each of the lexicons' analysis of Alice's Adventures in Wonderland. As can be seen NRC has an overall more positive sentiment but all three show a similar fluctuation in sentiment. 
+The following code plots the sentiment for each of the lexicons' analysis of Alice's Adventures in Wonderland. As can be seen NRC has an overall more positive sentiment but all three show a similar fluctuation in sentiment.
 
 ```{r estimate net sentiment in each section}
 bind_rows(afinn, bing_and_nrc) |> 
@@ -132,6 +131,7 @@ bind_rows(afinn, bing_and_nrc) |>
   geom_col(show.legend = FALSE) +
   facet_wrap(~method, ncol = 1, scales = "free_y")
 ```
+
 The counts below show the differences in negative vs. positive word counts in the nrc and bing lexicons.
 
 ```{r count of sentiment words in nrc}
@@ -145,7 +145,7 @@ get_sentiments("bing") |>
   count(sentiment)
 ```
 
-The following code shows the most common words in Lewis Carroll's texts. 
+The following code shows the most common words in Lewis Carroll's texts.
 
 ```{r most common words in Lews Carroll}
 bing_word_counts <- tidy_carroll |> 
@@ -153,6 +153,7 @@ bing_word_counts <- tidy_carroll |>
   count(word, sentiment, sort = TRUE) |> 
   ungroup() |> print()
 ```
+
 The following codes plots the most common positive and negative words in the Lewis Carroll's texts.
 
 ```{r plot most common words by sentiment}
@@ -167,8 +168,6 @@ bing_word_counts %>%
   labs(x = "Contribution to sentiment",
        y = NULL)
 ```
-
-
 
 ```{r create custom stop words library}
 custom_stop_words <- bind_rows(tibble(word = c("gutenberg"),  
@@ -196,12 +195,12 @@ tidy_carroll %>%
                    max.words = 100)
 ```
 
-
 ## Original Sentiment Analysis
 
 The following code uses the sentimentr package to analyze the Lewis Carroll text by sentence.
 
 This loads the sentimentr package
+
 ```{r load sentimentr}
 library(sentimentr)
 ```
@@ -251,9 +250,53 @@ carroll_sentiment_chapter <- carroll_sentences |>
 
 head(carroll_sentiment_chapter)
 ```
+
 The following plot shows the average sentiment throughout the two books by chapter.
+
 ```{r }
  ggplot(carroll_sentiment_chapter, aes(chapter, ave_sentiment, fill = book)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~book, ncol = 1, scales = "free_y")
 ```
+
+### Some updates (Farhod Ibragimov).Created the function for computing sentiment over chunks of text using three lexicons—AFINN, Bing, and NRC—and then applies it to a tidy text dataset
+
+```{r}
+#this code chunk is repo submission by Farhod Ibragimov
+lexicons <- list(
+  afinn = get_sentiments("afinn"),
+  bing  = get_sentiments("bing"),
+  nrc   = get_sentiments("nrc") |> 
+            filter(sentiment %in% c("positive","negative"))
+)
+names(tidy_carroll)
+compute_sentiment <- function(data, lex, chunk_size = 80, keep_value = FALSE) {
+  df <- data %>% inner_join(lex, by = "word")
+  
+  if (keep_value) {
+    df |>
+      group_by(index = linenumber %/% chunk_size) |>
+      summarise(sentiment = sum(value, na.rm = TRUE))
+  } else {
+    df |>
+      count(index = linenumber %/% chunk_size, sentiment) |>
+      pivot_wider(names_from   = sentiment,
+                  values_from  = n,
+                  values_fill  = 0) |>
+      mutate(sentiment = positive - negative)
+  }
+}
+
+afinn_df <- compute_sentiment(tidy_carroll, lexicons$afinn, keep_value = TRUE)
+bing_df  <- compute_sentiment(tidy_carroll, lexicons$bing)
+nrc_df   <- compute_sentiment(tidy_carroll, lexicons$nrc)
+
+head(afinn_df)
+head(bing_df)
+head(nrc_df)
+
+```
+
+Code pulls each sentiment table once into a lexicons list (and pre-filter NRC), instead of calling `get_sentiments()` repeatedly.
+
+Function `compute_sentiment()` does both AFINN (summing values) and binary lexicons (counting pos/neg) via a straightforward if/else with %\>%.
