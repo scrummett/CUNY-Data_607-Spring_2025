@@ -1,6 +1,6 @@
 ---
 title: "Class Repo New Submission"
-author: "Gillian McGovern, addition by Maxfield Raynolds"
+author: "Gillian McGovern, addition by Maxfield Raynolds and Aaliyah John-Harry"
 date: "2025-04-07"
 output: html_document
 ---
@@ -43,3 +43,23 @@ Using the !between() we can filter all of the flights that are less than 800 or 
 filter(flights, !between(distance, 800, 1500))
 ```
 
+Addition by Aaliyah John-Harry:
+
+# Add a new distance category column
+
+I added a column that categorizes the flight distance as short, medium and long making it easier to summarize and visualize.
+
+```{r}
+flights_updated <- flights %>%
+  mutate(distance_category = case_when(
+    between(distance, 800, 1500) ~ "medium (800-1500 mi)",
+    distance < 800              ~ "short (< 800 mi)",
+    distance > 1500             ~ "long (> 1500 mi)"
+  ))
+```
+
+# Count flights in each category
+```{r}
+flight_counts <- flights_updated %>%
+  count(distance_category)
+```
