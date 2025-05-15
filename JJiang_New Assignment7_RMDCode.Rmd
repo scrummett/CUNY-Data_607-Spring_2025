@@ -1,0 +1,231 @@
+---
+title: "Data 607 Assignment 7"
+author: "Jayden Jiang"
+date: "2025-03-15"
+output: html_document
+---
+
+# Library
+```{r}
+library(rjson)
+library(RCurl)
+library(rvest)
+library(selectr)
+library(httr)
+library(XML)
+library(stringr)
+library(arrow)
+library(ROAuth)
+library(gt)
+library(knitr)
+```
+
+# JSON format
+```{r}
+cunymart_data_json <- list(
+  list(Category = "Electronics", Item_Name = "Smartphone", Item_ID = 101, Brand = "TechBrand", Price = 699.99,
+       Variation_ID = "101-A", Variation_Details = "Color: Black, Storage: 64GB"),
+  list(Category = "Electronics", Item_Name = "Smartphone", Item_ID = 101, Brand = "TechBrand", Price = 699.99,
+       Variation_ID = "101-B", Variation_Details = "Color: White, Storage: 128GB"),
+  list(Category = "Electronics", Item_Name = "Laptop", Item_ID = 102, Brand = "CompuBrand", Price = 1099.99, 
+       Variation_ID = "102-A", Variation_Details = "Color: Silver, Storage: 256GB"),
+  list(Category = "Electronics", Item_Name = "Laptop", Item_ID = 102, Brand = "CompuBrand", Price = 1099.99,
+       Variation_ID = "102-B", Variation_Details = "Color: Space Gray, Storage: 512GB"),
+  list(Category = "Home Appliances", Item_Name = "Refrigerator", Item_ID = 201, Brand = "HomeCool", Price = 899.99,
+       Variation_ID = "201-A", Variation_Details = "Color: Stainless Steel, Capacity: 20 cu ft"),
+  list(Category = "Home Appliances", Item_Name = "Refrigerator", Item_ID = 201, Brand = "HomeCool", Price = 899.99,
+       Variation_ID = "201-B", Variation_Details = "Color: White, Capacity: 18 cu ft"),
+  list(Category = "Home Appliances", Item_Name = "Washing Machine", Item_ID = 202, Brand = "CleanTech", Price = 499.99,
+       Variation_ID = "202-A", Variation_Details = "Type: Front Load, Capacity: 4.5 cu ft"),
+  list(Category = "Home Appliances", Item_Name = "Washing Machine", Item_ID = 202, Brand = "CleanTech", Price = 499.99,
+       Variation_ID = "202-B", Variation_Details = "Type: Top Load, Capacity: 5.0 cu ft"),
+  list(Category = "Clothing", Item_Name = "T-Shirt", Item_ID = 301, Brand = "FashionCo", Price = 19.99,
+       Variation_ID = "301-A", Variation_Details = "Color: Blue, Size: S"),
+  list(Category = "Clothing", Item_Name = "T-Shirt", Item_ID = 301, Brand = "FashionCo", Price = 19.99,
+       Variation_ID = "301-B", Variation_Details = "Color: Red, Size: M"),
+  list(Category = "Clothing", Item_Name = "T-Shirt", Item_ID = 301, Brand = "FashionCo", Price = 19.99,
+       Variation_ID = "301-C", Variation_Details = "Color: Green, Size: L"),
+  list(Category = "Clothing", Item_Name = "Jeans", Item_ID = 302, Brand = "DenimWorks", Price = 49.99,
+       Variation_ID = "302-A", Variation_Details = "Color: Dark Blue, Size: 32"),
+  list(Category = "Clothing", Item_Name = "Jeans", Item_ID = 302, Brand = "DenimWorks", Price = 49.99,
+       Variation_ID = "302-B", Variation_Details = "Color: Light Blue, Size: 34"),
+  list(Category = "Books", Item_Name = "Fiction Novel", Item_ID = 401, Brand = "-", Price = 14.99,
+       Variation_ID = "401-A", Variation_Details = "Format: Hardcover, Language: English"),
+  list(Category = "Books", Item_Name = "Fiction Novel", Item_ID = 401, Brand = "-", Price = 14.99,
+       Variation_ID = "401-B", Variation_Details = "Format: Paperback, Language: Spanish"),
+  list(Category = "Books", Item_Name = "Non-Fiction Guide", Item_ID = 402, Brand = "-", Price = 24.99,
+       Variation_ID = "402-A", Variation_Details = "Format: eBook, Language: English"),
+  list(Category = "Books", Item_Name = "Non-Fiction Guide", Item_ID = 402, Brand = "-", Price = 24.99,
+       Variation_ID = "402-B", Variation_Details = "Format: Paperback, Language: French"),
+  list(Category = "Sports Equipment", Item_Name = "Basketball", Item_ID = 501, Brand = "SportsGear", Price = 29.99,
+       Variation_ID = "501-A", Variation_Details = "Size: Size 7, Color: Orange"),
+  list(Category = "Sports Equipment", Item_Name = "Tennis Racket", Item_ID = 502, Brand = "RacketPro", Price = 89.99,
+       Variation_ID = "502-A", Variation_Details = "Material: Graphite, Color: Black"),
+  list(Category = "Sports Equipment", Item_Name = "Tennis Racket", Item_ID = 502, Brand = "RacketPro", Price = 89.99,
+       Variation_ID = "502-B", Variation_Details = "Material: Aluminum, Color: Silver")
+)
+
+# Export JSON
+json_format <- toJSON(cunymart_data_json)
+write(json_format, file = "cunymart_data.json")
+
+# Import JSON
+imported_json <- fromJSON(file = "cunymart_data.json")
+print(imported_json)
+```
+
+## HTML Format
+```{r}
+cunymart_data_html <- data.frame(
+  Category = c("Electronics", "Electronics", "Electronics", "Electronics", "Home Appliances", "Home Appliances", 
+               "Home Appliances", "Home Appliances", "Clothing", "Clothing", "Clothing", "Clothing", "Clothing",
+               "Books", "Books", "Books", "Books", "Sports Equipment", "Sports Equipment", "Sports Equipment"),
+  Item_Name = c("Smartphone", "Smartphone", "Laptop", "Laptop", "Refrigerator", "Refrigerator", "Washing Machine",
+                "Washing Machine", "T-Shirt", "T-Shirt", "T-Shirt", "Jeans", "Jeans", "Fiction Novel", "Fiction Novel",
+                "Non-Fiction Guide", "Non-Fiction Guide", "Basketball", "Tennis Racket", "Tennis Racket"),
+  Item_ID = c(101, 101, 102, 102, 201, 201, 202, 202, 301, 301, 301, 302, 302, 401, 401, 402, 402, 501, 502, 502),
+  Brand = c("TechBrand", "TechBrand", "CompuBrand", "CompuBrand", "HomeCool", "HomeCool", "CleanTech", "CleanTech",
+            "FashionCo", "FashionCo", "FashionCo", "DenimWorks", "DenimWorks", "-", "-", "-", "-", "SportsGear", "RacketPro", "RacketPro"),
+  Price = c(699.99, 699.99, 1099.99, 1099.99, 899.99, 899.99, 499.99, 499.99, 19.99, 19.99, 19.99, 49.99,
+            49.99, 14.99, 14.99, 24.99, 24.99, 29.99, 89.99, 89.99),
+  Variation_ID = c("101-A", "101-B", "102-A", "102-B", "201-A", "201-B", "202-A", "202-B", "301-A", "301-B", "301-C",
+                   "302-A", "302-B", "401-A", "401-B", "402-A", "402-B", "501-A", "502-A", "502-B"),
+  Variation_Details = c("Color: Black, Storage: 64GB", "Color: White, Storage: 128GB", "Color: Silver, Storage: 256GB",
+                        "Color: Space Gray, Storage: 512GB", "Color: Stainless Steel, Capacity: 20 cu ft",
+                        "Color: White, Capacity: 18 cu ft", "Type: Front Load, Capacity: 4.5 cu ft", 
+                        "Type: Top Load, Capacity: 5.0 cu ft", "Color: Blue, Size: S", "Color: Red, Size: M",
+                        "Color: Green, Size: L", "Color: Dark Blue, Size: 32", "Color: Light Blue, Size: 34",
+                        "Format: Hardcover, Language: English", "Format: Paperback, Language: Spanish",
+                        "Format: eBook, Language: English", "Format: Paperback, Language: French", 
+                        "Size: Size 7, Color: Orange", "Material: Graphite, Color: Black", "Material: Aluminum, Color: Silver")
+)
+
+# Export HTML
+kable(cunymart_data_html, format = "html") %>%
+  writeLines("cunymart_data.html")
+
+# Import HTML
+html_content <- read_html("cunymart_data.html")
+extracted_table <- html_table(html_content)
+print(extracted_table)
+```
+
+## XML Format
+```{r}
+xml_doc <- newXMLDoc()
+root_node <- newXMLNode("Inventory", doc = xml_doc)
+
+items <- list(
+  list(Category = "Electronics", Item_Name = "Smartphone", Item_ID = 101, Brand = "TechBrand", Price = 699.99,
+       Variation_ID = "101-A", Variation_Details = "Color: Black, Storage: 64GB"),
+  list(Category = "Electronics", Item_Name = "Smartphone", Item_ID = 101, Brand = "TechBrand", Price = 699.99,
+       Variation_ID = "101-B", Variation_Details = "Color: White, Storage: 128GB"),
+  list(Category = "Electronics", Item_Name = "Laptop", Item_ID = 102, Brand = "CompuBrand", Price = 1099.99, 
+       Variation_ID = "102-A", Variation_Details = "Color: Silver, Storage: 256GB"),
+  list(Category = "Electronics", Item_Name = "Laptop", Item_ID = 102, Brand = "CompuBrand", Price = 1099.99,
+       Variation_ID = "102-B", Variation_Details = "Color: Space Gray, Storage: 512GB"),
+  list(Category = "Home Appliances", Item_Name = "Refrigerator", Item_ID = 201, Brand = "HomeCool", Price = 899.99,
+       Variation_ID = "201-A", Variation_Details = "Color: Stainless Steel, Capacity: 20 cu ft"),
+  list(Category = "Home Appliances", Item_Name = "Refrigerator", Item_ID = 201, Brand = "HomeCool", Price = 899.99,
+       Variation_ID = "201-B", Variation_Details = "Color: White, Capacity: 18 cu ft"),
+  list(Category = "Home Appliances", Item_Name = "Washing Machine", Item_ID = 202, Brand = "CleanTech", Price = 499.99,
+       Variation_ID = "202-A", Variation_Details = "Type: Front Load, Capacity: 4.5 cu ft"),
+  list(Category = "Home Appliances", Item_Name = "Washing Machine", Item_ID = 202, Brand = "CleanTech", Price = 499.99,
+       Variation_ID = "202-B", Variation_Details = "Type: Top Load, Capacity: 5.0 cu ft"),
+  list(Category = "Clothing", Item_Name = "T-Shirt", Item_ID = 301, Brand = "FashionCo", Price = 19.99,
+       Variation_ID = "301-A", Variation_Details = "Color: Blue, Size: S"),
+  list(Category = "Clothing", Item_Name = "T-Shirt", Item_ID = 301, Brand = "FashionCo", Price = 19.99,
+       Variation_ID = "301-B", Variation_Details = "Color: Red, Size: M"),
+  list(Category = "Clothing", Item_Name = "T-Shirt", Item_ID = 301, Brand = "FashionCo", Price = 19.99,
+       Variation_ID = "301-C", Variation_Details = "Color: Green, Size: L"),
+  list(Category = "Clothing", Item_Name = "Jeans", Item_ID = 302, Brand = "DenimWorks", Price = 49.99,
+       Variation_ID = "302-A", Variation_Details = "Color: Dark Blue, Size: 32"),
+  list(Category = "Clothing", Item_Name = "Jeans", Item_ID = 302, Brand = "DenimWorks", Price = 49.99,
+       Variation_ID = "302-B", Variation_Details = "Color: Light Blue, Size: 34"),
+  list(Category = "Books", Item_Name = "Fiction Novel", Item_ID = 401, Brand = "-", Price = 14.99,
+       Variation_ID = "401-A", Variation_Details = "Format: Hardcover, Language: English"),
+  list(Category = "Books", Item_Name = "Fiction Novel", Item_ID = 401, Brand = "-", Price = 14.99,
+       Variation_ID = "401-B", Variation_Details = "Format: Paperback, Language: Spanish"),
+  list(Category = "Books", Item_Name = "Non-Fiction Guide", Item_ID = 402, Brand = "-", Price = 24.99,
+       Variation_ID = "402-A", Variation_Details = "Format: eBook, Language: English"),
+  list(Category = "Books", Item_Name = "Non-Fiction Guide", Item_ID = 402, Brand = "-", Price = 24.99,
+       Variation_ID = "402-B", Variation_Details = "Format: Paperback, Language: French"),
+  list(Category = "Sports Equipment", Item_Name = "Basketball", Item_ID = 501, Brand = "SportsGear", Price = 29.99,
+       Variation_ID = "501-A", Variation_Details = "Size: Size 7, Color: Orange"),
+  list(Category = "Sports Equipment", Item_Name = "Tennis Racket", Item_ID = 502, Brand = "RacketPro", Price = 89.99,
+       Variation_ID = "502-A", Variation_Details = "Material: Graphite, Color: Black"),
+  list(Category = "Sports Equipment", Item_Name = "Tennis Racket", Item_ID = 502, Brand = "RacketPro", Price = 89.99,
+       Variation_ID = "502-B", Variation_Details = "Material: Aluminum, Color: Silver")
+)
+
+for (item in items) {
+  item_node <- newXMLNode("Item", parent = root_node)
+  for (key in names(item)) {
+    newXMLNode(key, item[[key]], parent = item_node)
+  }
+}
+
+# Export XML
+saveXML(xml_doc, file = "cunymart_data.xml")
+
+# Import XML
+imported_xml <- xmlParse("cunymart_data.xml")
+print(xmlToList(imported_xml))
+
+```
+
+## Parquet Format 
+```{r}
+# Create CUNYMart data
+cunymart_data_parquet <- data.frame(
+  Category = c("Electronics", "Electronics", "Electronics", "Electronics", "Home Appliances", "Home Appliances", 
+               "Home Appliances", "Home Appliances", "Clothing", "Clothing", "Clothing", "Clothing", "Clothing",
+               "Books", "Books", "Books", "Books", "Sports Equipment", "Sports Equipment", "Sports Equipment"),
+  Item_Name = c("Smartphone", "Smartphone", "Laptop", "Laptop", "Refrigerator", "Refrigerator", "Washing Machine",
+                "Washing Machine", "T-Shirt", "T-Shirt", "T-Shirt", "Jeans", "Jeans", "Fiction Novel", "Fiction Novel",
+                "Non-Fiction Guide", "Non-Fiction Guide", "Basketball", "Tennis Racket", "Tennis Racket"),
+  Item_ID = c(101, 101, 102, 102, 201, 201, 202, 202, 301, 301, 301, 302, 302, 401, 401, 402, 402, 501, 502, 502),
+  Brand = c("TechBrand", "TechBrand", "CompuBrand", "CompuBrand", "HomeCool", "HomeCool", "CleanTech", "CleanTech",
+            "FashionCo", "FashionCo", "FashionCo", "DenimWorks", "DenimWorks", "-", "-", "-", "-", "SportGear", "RacketPro", "RacketPro"),
+  Price = c(699.99, 699.99, 1099.99, 1099.99, 899.99, 899.99, 499.99, 499.99, 19.99, 19.99, 19.99, 49.99,
+            49.99, 14.99, 14.99, 24.99, 24.99, 29.99, 89.99, 89.99),
+  Variation_ID = c("101-A", "101-B", "102-A", "102-B", "201-A", "201-B", "202-A", "202-B", "301-A", "301-B", "301-C",
+                   "302-A", "302-B", "401-A", "401-B", "402-A", "402-B", "501-A", "502-A", "502-B"),
+  Variation_Details = c("Color: Black, Storage: 64GB", "Color: White, Storage: 128GB", "Color: Silver, Storage: 256GB",
+                        "Color: Space Gray, Storage: 512GB", "Color: Stainless Steel, Capacity: 20 cu ft",
+                        "Color: White, Capacity: 18 cu ft", "Type: Front Load, Capacity: 4.5 cu ft", 
+                        "Type: Top Load, Capacity: 5.0 cu ft", "Color: Blue, Size: S", "Color: Red, Size: M",
+                        "Color: Green, Size: L", "Color: Dark Blue, Size: 32", "Color: Light Blue, Size: 34",
+                        "Format: Hardcover, Language: English", "Format: Paperback, Language: Spanish",
+                        "Format: eBook, Language: English", "Format: Paperback, language: French", 
+                        "Size: Size 7, Color: Orange", "Material: Graphite, Color: Black", "Material: Aluminum, Color: Silver")
+)
+
+# Export to Parquet
+write_parquet(cunymart_data_parquet, "cunymart_data.parquet")
+
+imported_parquet <- read_parquet("cunymart_data.parquet")
+head(imported_parquet)
+```
+
+## Summary Table 
+```{r}
+pros_cons <- data.frame(
+  Format = c("JSON", "HTML", "XML", "Parquet"),
+  Pros = c("Simple to debug, Easy to read & write, Used in APIs",
+           "Great for displaying in web browsers, Interative visualizations",
+           "Hierarchial data support, self-descriptive format",
+           "Highly compressed, Fast for big data and analytics"),
+  Cons = c("No Metadata, Harder to work with large files",
+           "Not a suitable data exchange format, Parsing is harder",
+           "Verbose and large file sizes, Harder to read",
+           "Harder to read, Complex to debug")
+)
+
+proscons_table <- gt(pros_cons) %>%
+  tab_header(
+    title = "Pros and Cons of Different Data Formats"
+  )
+
+proscons_table
+```
