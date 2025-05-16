@@ -39,9 +39,9 @@ This dataset may seem simple to read on the surface, but requires additional cod
 ```{r data-cleaning, echo=TRUE}
 dan_cities_tid <- dan_cities %>%
   mutate(
-    across(starts_with("Temp"), ~ parse_number(.)),
-    across(starts_with("Humid"), ~ parse_number(.))
-  )
+  across(matches("^(Temp|Humid)_"), parse_number)
+)
+
 ```
 
 # Data Tidy Transformations
