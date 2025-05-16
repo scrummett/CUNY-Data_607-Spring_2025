@@ -259,9 +259,11 @@ The following plot shows the average sentiment throughout the two books by chapt
   facet_wrap(~book, ncol = 1, scales = "free_y")
 ```
 
-### Some updates.
+
+### Some updates (Farhod Ibragimov).Created the function for computing sentiment over chunks of text using three lexicons—AFINN, Bing, and NRC—and then applies it to a tidy text dataset
 
 ```{r}
+
 lexicons <- list(
   afinn = get_sentiments("afinn"),
   bing  = get_sentiments("bing"),
